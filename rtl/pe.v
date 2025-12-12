@@ -28,11 +28,12 @@ module pe #(parameter DATA_WIDTH = 32,
                 kernel_reg    <= in_left;
                 kernel_loaded <= 1;
             end
+            top_reg          <= in_top;
             left_reg         <= in_left;
+            partial_sum      <= kernel_reg * in_top;
         end else begin
             partial_sum      <= kernel_reg * in_top;
             top_reg          <= in_top;
-            left_reg         <= in_left;
             kernel_loaded    <= 0;
         end
     end
