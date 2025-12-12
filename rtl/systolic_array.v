@@ -4,9 +4,7 @@ module systolic_array #(parameter DATA_WIDTH = 32,
                        (input wire clk,
                         input wire rst,
                         input wire load_kernel_signal,
-                        input wire [INPUT_WIDTH-1:0] input_in [0:ARRAY_SIZE-1],
-                        input wire [INPUT_WIDTH-1:0] kernel_in [0:ARRAY_SIZE-1],
-                        output wire [DATA_WIDTH-1:0] out_data);
+                        input wire [(INPUT_WIDTH*ARRAY_SIZE)-1:0] input_in, input wire [(INPUT_WIDTH*ARRAY_SIZE)-1:0] kernel_in, output wire [DATA_WIDTH-1:0] out_data);
     
     reg [DATA_WIDTH-1:0] out_data_reg;
     wire [INPUT_WIDTH-1:0] pe_left_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
@@ -24,8 +22,8 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     .clk(clk),
     .rst(rst),
     .load_kernel_signal(load_kernel_signal),
-    .in_top(input_in[j]),
-    .in_left(kernel_in[i]),
+    .in_top(input_in[0 +: INPUT_WIDTH]),
+    .in_left(kernel_in[0 +: INPUT_WIDTH]),
     .out_partial(pe_out_partials[i][j]),
     .out_down(pe_out[i][j]),
     .out_right(pe_left_out[i][j])
@@ -37,7 +35,7 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     .clk(clk),
     .rst(rst),
     .load_kernel_signal(load_kernel_signal),
-    .in_top(input_in[j]),
+    .in_top(input_in[j*INPUT_WIDTH +: INPUT_WIDTH]),
     .in_left(pe_left_out[i][j-1]),
     .out_partial(pe_out_partials[i][j]),
     .out_down(pe_out[i][j]),
@@ -50,8 +48,8 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     .clk(clk),
     .rst(rst),
     .load_kernel_signal(load_kernel_signal),
-    .in_top(
-    .in_left(kernel_in[i]),
+    .in_top(pe_out[i-1][j]),
+    .in_left(kernel_in[i*INPUT_WIDTH +: INPUT_WIDTH]),
     .out_partial(pe_out_partials[i][j]),
     .out_down(pe_out[i][j]),
     .out_right(pe_left_out[i][j])
@@ -63,7 +61,7 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     .clk(clk),
     .rst(rst),
     .load_kernel_signal(load_kernel_signal),
-    .in_top(input_in[j]),
+    .in_top(pe_out[i-1][j]),
     .in_left(pe_left_out[i][j-1]),
     .out_partial(pe_out_partials[i][j]),
     .out_down(pe_out[i][j]),
@@ -74,6 +72,20 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     end
     end
     endgenerate
+    
+    integer m, n;
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            out_data_reg <= {DATA_WIDTH{1'b0}};
+            end else begin
+            out_data_reg <= {DATA_WIDTH{1'b0}};
+            for (m = 0; m < ARRAY_SIZE; m = m + 1) begin
+                for (n = 0; n < ARRAY_SIZE; n = n + 1) begin
+                    out_data_reg <= out_data_reg + pe_out_partials[m][n];
+                end
+            end
+        end
+    end
     
     assign out_data = out_data_reg;
 endmodule
