@@ -1,15 +1,16 @@
 module systolic_array #(parameter DATA_WIDTH = 32,
-                        parameter ARRAY_SIZE = 4)
+                        parameter ARRAY_SIZE = 4,
+                        parameter INPUT_WIDTH = 8)
                        (input wire clk,
                         input wire rst,
                         input wire load_kernel_signal,
-                        input wire [DATA_WIDTH-1:0] input_in [0:ARRAY_SIZE-1],
-                        input wire [DATA_WIDTH-1:0] kernel_in [0:ARRAY_SIZE-1],
+                        input wire [INPUT_WIDTH-1:0] input_in [0:ARRAY_SIZE-1],
+                        input wire [INPUT_WIDTH-1:0] kernel_in [0:ARRAY_SIZE-1],
                         output wire [DATA_WIDTH-1:0] out_data);
     
     reg [DATA_WIDTH-1:0] out_data_reg;
-    wire [DATA_WIDTH-1:0] pe_left_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
-    wire [DATA_WIDTH-1:0] pe_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
+    wire [INPUT_WIDTH-1:0] pe_left_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
+    wire [INPUT_WIDTH-1:0] pe_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
     wire [DATA_WIDTH-1:0] pe_out_partials [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
     
     genvar i, j;
