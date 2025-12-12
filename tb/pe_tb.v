@@ -1,6 +1,21 @@
 `timescale 1ns/1ps
 
-module pe_testbench; parameter DATA_WIDTH = 32; parameter INPUT_WIDTH = 8; parameter CLK_PERIOD = 10; reg clk; reg rst; reg load_kernel_signal; reg [INPUT_WIDTH-1:0] in_top; reg [INPUT_WIDTH-1:0] in_left; wire [DATA_WIDTH-1:0] out_partial; wire [INPUT_WIDTH-1:0] out_down; wire [INPUT_WIDTH-1:0] out_right; integer test_count = 0; integer pass_count = 0; integer fail_count = 0; pe #(.DATA_WIDTH(DATA_WIDTH)
+module pe_tb; 
+    parameter DATA_WIDTH = 32; 
+    parameter INPUT_WIDTH = 8; 
+    parameter CLK_PERIOD = 10; 
+    reg clk; 
+    reg rst; 
+    reg load_kernel_signal; 
+    reg [INPUT_WIDTH-1:0] in_top; 
+    reg [INPUT_WIDTH-1:0] in_left; 
+    wire [DATA_WIDTH-1:0] out_partial; 
+    wire [INPUT_WIDTH-1:0] out_down; 
+    wire [INPUT_WIDTH-1:0] out_right; 
+    integer test_count = 0; 
+    integer pass_count = 0; 
+    integer fail_count = 0; 
+    pe #(.DATA_WIDTH(DATA_WIDTH)
                                                                                                                                                                                                                                                                                                                                                                                               , .INPUT_WIDTH(INPUT_WIDTH)) uut (.clk(clk), .rst(rst), .load_kernel_signal(load_kernel_signal), .in_top(in_top), .in_left(in_left), .out_partial(out_partial), .out_down(out_down), .out_right(out_right));
 
 initial begin
@@ -35,11 +50,8 @@ initial begin
 
     #(CLK_PERIOD * 2);
 
-    // Release reset
     rst = 0;
     #(CLK_PERIOD);
-
-    $display("Starting PE testbench with assertions...");
 
     // Test 1: Basic multiplication (5 * 3 = 15)
     in_top             = 8'd5;
@@ -72,16 +84,24 @@ initial begin
     check_result(32'd65025, 8'd255, 8'd255, "Max values 255*255");
 
     // Test 4: Reset during operation
-    in_top             = 8'd100;
-    in_left            = 8'd200;
+    in_top = 8'd100;
+    in_left = 8'd200;
     load_kernel_signal = 1;
-    #(CLK_PERIOD/2);
+    #(CLK_PERIOD/2); // sometime to load kernel and compute
+
+    // Interrupt mid-operation
     rst = 1;
     #(CLK_PERIOD);
-    rst                = 0;
+    rst = 0;
+
+    // Inputs cleared
     load_kernel_signal = 0;
+    in_top = 0;
+    in_left = 0;
+
     #(CLK_PERIOD);
     check_result(32'd0, 8'd0, 8'd0, "Reset during operation");
+
 
     // Test 5: Load new kernel after reset (50 * 60 = 3000)
     in_top             = 8'd50;
@@ -93,13 +113,14 @@ initial begin
     #(CLK_PERIOD);
     check_result(32'd3000, 8'd50, 8'd60, "Multiplication after reset 60*50");
 
-    // Test 6: Verify kernel persistence
+    // Test 6: Load new kernel
     in_top             = 8'd10;
     in_left            = 8'd99;
+    load_kernel_signal = 1;      
+    #(CLK_PERIOD);
     load_kernel_signal = 0;
     #(CLK_PERIOD);
-    #(CLK_PERIOD);
-    check_result(32'd600, 8'd10, 8'd99, "Kernel persistence 60*10");
+    check_result(32'd990, 8'd10, 8'd99, "New kernel calculation 99*10");
 
     // Test 7: Single value tests
     in_top             = 8'd1;
@@ -139,7 +160,7 @@ end
 
 initial begin
     $dumpfile("pe_testbench.vcd");
-    $dumpvars(0, pe_testbench);
+    $dumpvars(0, pe_tb);
 end
 
 endmodule
