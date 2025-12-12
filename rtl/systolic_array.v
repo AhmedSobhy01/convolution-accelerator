@@ -73,17 +73,22 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     end
     endgenerate
     
+    reg [DATA_WIDTH-1:0] sum_partials;
     integer m, n;
+    always @(*) begin
+        sum_partials = {DATA_WIDTH{1'b0}};
+        for (m = 0; m < ARRAY_SIZE; m = m + 1) begin
+            for (n = 0; n < ARRAY_SIZE; n = n + 1) begin
+                sum_partials = sum_partials + pe_out_partials[m][n];
+            end
+        end
+    end
+    
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             out_data_reg <= {DATA_WIDTH{1'b0}};
             end else begin
-            out_data_reg <= {DATA_WIDTH{1'b0}};
-            for (m = 0; m < ARRAY_SIZE; m = m + 1) begin
-                for (n = 0; n < ARRAY_SIZE; n = n + 1) begin
-                    out_data_reg <= out_data_reg + pe_out_partials[m][n];
-                end
-            end
+            out_data_reg <= sum_partials;
         end
     end
     
