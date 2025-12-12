@@ -5,19 +5,18 @@ module systolic_array #(parameter DATA_WIDTH = 32,
                         input wire rst,
                         input wire load_kernel_signal,
                         input wire [(INPUT_WIDTH*ARRAY_SIZE)-1:0] input_in, input wire [(INPUT_WIDTH*ARRAY_SIZE)-1:0] kernel_in, output wire [DATA_WIDTH-1:0] out_data);
-    
-    reg [DATA_WIDTH-1:0] out_data_reg;
+
     wire [INPUT_WIDTH-1:0] pe_left_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
     wire [INPUT_WIDTH-1:0] pe_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
     wire [DATA_WIDTH-1:0] pe_out_partials [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
-    
+
     genvar i, j;
     generate
     for (i = 0; i < ARRAY_SIZE; i = i + 1) begin : row
     for (j = 0; j < ARRAY_SIZE; j = j + 1) begin : col
-    
+
     if (i == 0 && j == 0) begin : pe_00
-    
+
     pe #(.DATA_WIDTH(DATA_WIDTH)) pe_inst (
     .clk(clk),
     .rst(rst),
@@ -28,9 +27,9 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     .out_down(pe_out[i][j]),
     .out_right(pe_left_out[i][j])
     );
-    
+
     end else if (i == 0) begin : pe_top_row
-    
+
     pe #(.DATA_WIDTH(DATA_WIDTH)) pe_inst (
     .clk(clk),
     .rst(rst),
@@ -41,9 +40,9 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     .out_down(pe_out[i][j]),
     .out_right(pe_left_out[i][j])
     );
-    
+
     end else if (j == 0) begin : pe_left_col
-    
+
     pe #(.DATA_WIDTH(DATA_WIDTH)) pe_inst (
     .clk(clk),
     .rst(rst),
@@ -54,9 +53,9 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     .out_down(pe_out[i][j]),
     .out_right(pe_left_out[i][j])
     );
-    
+
     end else begin : pe_inner
-    
+
     pe #(.DATA_WIDTH(DATA_WIDTH)) pe_inst (
     .clk(clk),
     .rst(rst),
@@ -67,30 +66,20 @@ module systolic_array #(parameter DATA_WIDTH = 32,
     .out_down(pe_out[i][j]),
     .out_right(pe_left_out[i][j])
     );
-    
+
     end
     end
     end
     endgenerate
-    
+
     reg [DATA_WIDTH-1:0] sum_partials;
-    integer m, n;
+    integer m;
     always @(*) begin
         sum_partials = {DATA_WIDTH{1'b0}};
         for (m = 0; m < ARRAY_SIZE; m = m + 1) begin
-            for (n = 0; n < ARRAY_SIZE; n = n + 1) begin
-                sum_partials = sum_partials + pe_out_partials[m][n];
-            end
+            sum_partials = sum_partials + pe_out_partials[ARRAY_SIZE-1][m];
         end
     end
-    
-    always @(posedge clk or posedge rst) begin
-        if (rst) begin
-            out_data_reg <= {DATA_WIDTH{1'b0}};
-            end else begin
-            out_data_reg <= sum_partials;
-        end
-    end
-    
-    assign out_data = out_data_reg;
+
+    assign out_data = rst ? {DATA_WIDTH{1'b0}} : sum_partials;
 endmodule
