@@ -8,9 +8,9 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
     output wire [DATA_WIDTH-1:0] out_data
 );
 
-    wire [INPUT_WIDTH-1:0] pe_left_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
-    wire [INPUT_WIDTH-1:0] pe_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
-    wire [DATA_WIDTH-1:0] pe_out_partials [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
+    wire [INPUT_WIDTH-1:0] pe_kernel_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
+    wire [INPUT_WIDTH-1:0] pe_input [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
+    wire [DATA_WIDTH-1:0] pe_out_psum [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
 
     genvar i, j;
     generate
@@ -21,44 +21,55 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .clk(clk),
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
-                .in_top(input_in[0 +: INPUT_WIDTH]),
-                .in_left(kernel_in[0 +: INPUT_WIDTH]),
-                .out_partial(pe_out_partials[i][j]),
-                .out_down(pe_out[i][j]),
-                .out_right(pe_left_out[i][j])
+                .in_input(input_in[0 +: INPUT_WIDTH]),
+                .in_kernel(kernel_in[0 +: INPUT_WIDTH]),
+                .out_psum(32'd0),
+                .out_input(pe_input[i][j]),
+                .out_kernel(pe_kernel_out[i][j])
                 );
             end else if (i == 0) begin : pe_top_row
                 pe #(.DATA_WIDTH(DATA_WIDTH), .INPUT_WIDTH(INPUT_WIDTH)) pe_inst (
                 .clk(clk),
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
-                .in_top(input_in[j*INPUT_WIDTH +: INPUT_WIDTH]),
-                .in_left(pe_left_out[i][j-1]),
-                .out_partial(pe_out_partials[i][j]),
-                .out_down(pe_out[i][j]),
-                .out_right(pe_left_out[i][j])
+                .in_input(input_in[j*INPUT_WIDTH +: INPUT_WIDTH]),
+                .in_kernel(32'd0),
+                .out_psum(pe_out_psum[i][j]),
+                .out_input(pe_input[i][j]),
+                .out_kernel(pe_kernel_out[i][j])
                 );
             end else if (j == 0) begin : pe_left_col
                 pe #(.DATA_WIDTH(DATA_WIDTH), .INPUT_WIDTH(INPUT_WIDTH)) pe_inst (
                 .clk(clk),
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
-                .in_top(pe_out[i-1][j]),
-                .in_left(kernel_in[i*INPUT_WIDTH +: INPUT_WIDTH]),
-                .out_partial(pe_out_partials[i][j]),
-                .out_down(pe_out[i][j]),
-                .out_right(pe_left_out[i][j])
+                .in_input(pe_input[i-1][ARRAY_SIZE-1]),
+                .in_kernel(kernel_in[i*INPUT_WIDTH +: INPUT_WIDTH]),
+                .out_psum(pe_out_psum[i][j]),
+                .out_input(pe_input[i][j]),
+                .out_kernel(pe_kernel_out[i][j])
+                );
+            end else if (j == ARRAY_SIZE-1) begin : pe_right_col
+                pe #(.DATA_WIDTH(DATA_WIDTH), .INPUT_WIDTH(INPUT_WIDTH)) pe_inst (
+                .clk(clk),
+                .rst(rst),
+                .load_kernel_signal(load_kernel_signal),
+                .in_input(pe_input[i-1][0]),
+                .in_kernel(pe_kernel_out[i-1][j]),
+                .out_psum(pe_out_psum[i][j]),
+                .out_input(pe_input[i][j]),
+                .out_kernel(pe_kernel_out[i][j])
                 );
             end else begin : pe_inner
                 pe #(.DATA_WIDTH(DATA_WIDTH), .INPUT_WIDTH(INPUT_WIDTH)) pe_inst (
                 .clk(clk),
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
-                .in_top(pe_out[i-1][j]),
-                .in_left(pe_left_out[i][j-1]),
-                .out_partial(pe_out_partials[i][j]),
-                .out_down(pe_out[i][j]),
-                .out_right(pe_left_out[i][j])
+                .in_input(pe_input[i-1][j-1]),
+                .in_kernel(pe_kernel_out[i-1][j]),
+                .out_psum(pe_out_psum[i][j]),
+                .out_input(pe_input[i][j]),
+                .out_kernel(pe_kernel_out[i][j])
                 );
             end
         end
@@ -70,7 +81,7 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
     always @(*) begin
         sum_partials = {DATA_WIDTH{1'b0}};
         for (m = 0; m < ARRAY_SIZE; m = m + 1) begin
-            sum_partials = sum_partials + pe_out_partials[ARRAY_SIZE-1][m];
+            sum_partials = sum_partials + pe_out_psum[ARRAY_SIZE-1][m];
         end
     end
 
