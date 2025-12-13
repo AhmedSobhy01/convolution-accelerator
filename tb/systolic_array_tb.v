@@ -16,11 +16,7 @@ module systolic_array_tb;
     integer pass_count = 0;
     integer fail_count = 0;
 
-    systolic_array #(
-        .DATA_WIDTH(DATA_WIDTH),
-        .ARRAY_SIZE(ARRAY_SIZE),
-        .INPUT_WIDTH(INPUT_WIDTH)
-    ) dut (
+    systolic_array #(.DATA_WIDTH(DATA_WIDTH), .ARRAY_SIZE(ARRAY_SIZE), .INPUT_WIDTH(INPUT_WIDTH)) dut (
         .clk(clk),
         .rst(rst),
         .load_kernel_signal(load_kernel_signal),
@@ -31,15 +27,13 @@ module systolic_array_tb;
 
     reg [INPUT_WIDTH * ARRAY_SIZE - 1:0] kernel_vectors [0:ARRAY_SIZE-1];
     reg [INPUT_WIDTH * ARRAY_SIZE - 1:0] input_vectors  [0:INPUT_DEPTH-1];
-
     reg [DATA_WIDTH-1:0] expected_outputs [0:INPUT_DEPTH-1];
     integer output_idx;
     reg outputs_valid;
-
     integer idx;
 
     initial begin
-        clk            = 1'b0;
+        clk = 1'b0;
         forever #5 clk = ~clk;
     end
 
