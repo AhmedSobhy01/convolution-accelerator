@@ -47,3 +47,8 @@ desktop.ini
 vsim.wlf
 *.mpf
 *.mti
+# OpenLane (ignore all runs except final/)
+runs/
+tmp/
+results/
+logs/
