@@ -7,6 +7,7 @@ config/      - OpenLane synthesis config.json files
 final/       - Final OpenLane outputs (GDSII, LEF, reports only)
 docs/        - For guidelines, ambigous parts of the code or any of your great artistic diagrams
 sim/         - For do files
+tb/          - All testbench Verilog files
 ```
 
 ## Naming Conventions
@@ -61,7 +62,8 @@ end
 - **Generate blocks**: Named blocks with descriptive labels
 
 ## Testbenches
-- Naming: `module_name_tb.v`
+- File naming: `module_name_tb.v`
+- Module naming: `module_name_tb`
 - Use `$display` with similar formats as if we were able to use assertions (system verilog privilege)
 also print the total number of failed/passed cases at the end of your tb.
 ```verilog
