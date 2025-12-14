@@ -6,6 +6,7 @@ scripts/     - Python/Shell scripts for testing, testbench generation, analysis
 config/      - OpenLane synthesis config.json files
 final/       - Final OpenLane outputs (GDSII, LEF, reports only)
 docs/        - For guidelines, ambigous parts of the code or any of your great artistic diagrams
+sim/         - For do files
 ```
 
 ## Naming Conventions
