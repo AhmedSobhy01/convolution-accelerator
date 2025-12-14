@@ -66,11 +66,13 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
     endgenerate
 
     reg [DATA_WIDTH-1:0] sum_partials;
-    integer m;
+    integer m, n;
     always @(*) begin
         sum_partials = {DATA_WIDTH{1'b0}};
-        for (m = 0; m < ARRAY_SIZE; m = m + 1) begin
-            sum_partials = sum_partials + pe_out_partials[ARRAY_SIZE-1][m];
+        for (n = 0; n < ARRAY_SIZE; n = n + 1) begin
+            for (m = 0; m < ARRAY_SIZE; m = m + 1) begin
+                sum_partials = sum_partials + pe_out_partials[n][m];
+            end
         end
     end
 

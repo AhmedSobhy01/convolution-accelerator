@@ -132,9 +132,13 @@ module systolic_array_tb;
     end
 
     initial begin
-        kernel_vectors[0] = {8'd100, 8'd10, 8'd20}; // Column 0: {K[2][0], K[1][0], K[0][0]}
-        kernel_vectors[1] = {8'd10, 8'd20, 8'd40};  // Column 1: {K[2][1], K[1][1], K[0][1]}
-        kernel_vectors[2] = {8'd60, 8'd30, 8'd50};  // Column 2: {K[2][2], K[1][2], K[0][2]}
+        // Kernel
+        // [20 40 50]
+        // [10 20 30]
+        // [100 10 60]
+        kernel_vectors[0] = {8'd20, 8'd10, 8'd100};
+        kernel_vectors[1] = {8'd40, 8'd20, 8'd10};
+        kernel_vectors[2] = {8'd50, 8'd30, 8'd60};
 
         input_vectors[0] = {8'd12, 8'd52, 8'd32}; // [12, 52, 32]
         input_vectors[1] = {8'd20, 8'd18, 8'd28}; // [20, 18, 28]
@@ -146,15 +150,15 @@ module systolic_array_tb;
         input_vectors[7] = {8'd42, 8'd23, 8'd28}; // [42, 23, 28]
         input_vectors[8] = {8'd29, 8'd56, 8'd2}; // [29, 56, 2]
 
-        expected_outputs[0] = 32'd9600;
-        expected_outputs[1] = 32'd6600;
-        expected_outputs[2] = 32'd7200;
-        expected_outputs[3] = 32'd4300;
-        expected_outputs[4] = 32'd15200;
-        expected_outputs[5] = 32'd4700;
-        expected_outputs[6] = 32'd22200;
-        expected_outputs[7] = 32'd9300;
-        expected_outputs[8] = 32'd8700;
+        expected_outputs[0] = 32'd9150;
+        expected_outputs[1] = 32'd6270;
+        expected_outputs[2] = 32'd8360;
+        expected_outputs[3] = 32'd7900;
+        expected_outputs[4] = 32'd20130;
+        expected_outputs[5] = 32'd11980;
+        expected_outputs[6] = 32'd13040;
+        expected_outputs[7] = 32'd4630;
+        expected_outputs[8] = 32'd2920;
     end
 
     initial begin
