@@ -76,14 +76,31 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
     end
     endgenerate
 
-    reg [DATA_WIDTH-1:0] sum_partials;
-    integer m;
-    always @(*) begin
-        sum_partials = {DATA_WIDTH{1'b0}};
-        for (m = 0; m < ARRAY_SIZE; m = m + 1) begin
-            sum_partials = sum_partials + pe_out_psum[ARRAY_SIZE-1][m];
+    genvar i;
+    wire [ARRAY_SIZE*DATA_WIDTH-1:0] last_row_flat;
+    wire [ARRAY_SIZE*DATA_WIDTH-1:0] sum_partials;
+    generate
+        for (i = 0; i < ARRAY_SIZE; i = i + 1) begin
+            assign last_row_flat[(i+1)*DATA_WIDTH-1 -: DATA_WIDTH] = pe_out_psum[ARRAY_SIZE-1][i];
         end
-    end
+    endgenerate
+
+
+    shift_register #(.SHIFT_SIZE(ARRAY_SIZE), .DATA_WIDTH(INPUT_WIDTH)) input_shift_reg (
+        .clk(clk),
+        .rst(rst),
+        .in_data(last_row_flat),
+        .out_data(sum_partials)
+    );
+
+    // split sum_partials to 3 DATA_WIDTH parts and sum them
+    genvar k;
+    wire [DATA_WIDTH-1:0] final_sum;
+    generate
+        for (k = 0; k < ARRAY_SIZE; k = k + 1) begin : sum_loop
+            assign final_sum = final_sum + sum_partials[(k+1)*DATA_WIDTH-1 -: DATA_WIDTH];
+        end
+    endgenerate
 
     assign out_data = rst ? {DATA_WIDTH{1'b0}} : sum_partials;
 endmodule
