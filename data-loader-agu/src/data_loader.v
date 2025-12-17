@@ -15,12 +15,19 @@ module data_loader_padded_calc #(
   input                   rx_valid,
   output reg              rx_ready,
 
-  // SRAM write port (64-bit)
-  output reg              sram_en,
-  output reg              sram_we,        // 1=write
-  output reg [ADDR_W-1:0] sram_addr,      // word address
-  output reg [63:0]       sram_wdata,
-  output reg [7:0]        sram_wmask
+  // SRAM0 write port (image + kernel, 16 KB)
+  output reg              sram0_en,
+  output reg              sram0_we,        // 1=write
+  output reg [ADDR_W-1:0] sram0_addr,      // word address
+  output reg [63:0]       sram0_wdata,
+  output reg [7:0]        sram0_wmask,
+
+  // SRAM1 write port (unused for now, reserved for psum/output)
+  output reg              sram1_en,
+  output reg              sram1_we,
+  output reg [ADDR_W-1:0] sram1_addr,
+  output reg [63:0]       sram1_wdata,
+  output reg [7:0]        sram1_wmask
 );
 
   // ----------------------------
@@ -90,16 +97,28 @@ module data_loader_padded_calc #(
       img_written <= 16'd0;
       ker_written <= 16'd0;
 
-      sram_en <= 1'b0;
-      sram_we <= 1'b0;
-      sram_addr <= {ADDR_W{1'b0}};
-      sram_wdata <= 64'd0;
-      sram_wmask <= 8'h00;
+      // SRAM0 defaults (idle)
+      sram0_en <= 1'b0;
+      sram0_we <= 1'b0;
+      sram0_addr <= {ADDR_W{1'b0}};
+      sram0_wdata <= 64'd0;
+      sram0_wmask <= 8'h00;
+
+      // SRAM1 defaults (idle)
+      sram1_en    <= 1'b0;
+      sram1_we    <= 1'b0;
+      sram1_addr  <= {ADDR_W{1'b0}};
+      sram1_wdata <= 64'd0;
+      sram1_wmask <= 8'h00;
     end else begin
       // default: no write pulse unless asserted in a *_UPPER state
-      sram_en <= 1'b0;
-      sram_we <= 1'b0;
-      sram_wmask <= 8'h00;
+      sram0_en <= 1'b0;
+      sram0_we <= 1'b0;
+      sram0_wmask <= 8'h00;
+
+      sram1_en    <= 1'b0;
+      sram1_we    <= 1'b0;
+      sram1_wmask <= 8'h00;
 
       case (state)
         IDLE: begin
@@ -118,12 +137,12 @@ module data_loader_padded_calc #(
 
         LOAD_IMG_UPPER: begin
           if (rx_valid && rx_ready) begin
-            // write 8 bytes (2x32-bit beats)
-            sram_en    <= 1'b1;
-            sram_we    <= 1'b1;
-            sram_addr  <= byte_ptr[15:3];
-            sram_wdata <= {rx_data, buf_lo};
-            sram_wmask <= 8'hFF;
+            // write 8 bytes (2x32-bit beats) into SRAM0
+            sram0_en    <= 1'b1;
+            sram0_we    <= 1'b1;
+            sram0_addr  <= byte_ptr[15:3];
+            sram0_wdata <= {rx_data, buf_lo};
+            sram0_wmask <= 8'hFF;
 
             byte_ptr <= byte_ptr + 16'd8;
             img_written <= img_written + 16'd8;
@@ -147,11 +166,11 @@ module data_loader_padded_calc #(
 
         LOAD_KER_UPPER: begin
           if (rx_valid && rx_ready) begin
-            sram_en    <= 1'b1;
-            sram_we    <= 1'b1;
-            sram_addr  <= byte_ptr[15:3];
-            sram_wdata <= {rx_data, buf_lo};
-            sram_wmask <= 8'hFF;
+            sram0_en    <= 1'b1;
+            sram0_we    <= 1'b1;
+            sram0_addr  <= byte_ptr[15:3];
+            sram0_wdata <= {rx_data, buf_lo};
+            sram0_wmask <= 8'hFF;
 
             byte_ptr <= byte_ptr + 16'd8;
             ker_written <= ker_written + 16'd8;

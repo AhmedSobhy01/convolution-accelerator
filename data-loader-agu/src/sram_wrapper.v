@@ -1,5 +1,5 @@
 module sram_1rw1r_64b_wrapper #(
-  parameter ADDR_W = 12  // 4096 words -> 12 bits
+  parameter ADDR_W = 11  // 2048 words -> 11 bits
 )(
   input  wire             clk,
 
