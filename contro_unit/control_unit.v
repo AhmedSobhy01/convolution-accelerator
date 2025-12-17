@@ -1,4 +1,7 @@
-module control_unit #()(
+module control_unit #(
+    parameter CYCLES_PER_KERNEL_LOAD = 16,
+    parameter FILL_CYCLES = 16
+)(
     input  wire clk,
     input  wire rst_n,
 
@@ -49,6 +52,9 @@ module control_unit #()(
 
     reg [3:0] state;
 
+    integer counter;
+    // reg [1:0] kernel_index = 2'd0;
+
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -65,10 +71,37 @@ module control_unit #()(
 
         end else begin
             
+            load_kernel <= 1'b0;
+            systolic_data_valid <= 1'b0;
 
             case (state)
+                IDLE: begin
+                    done <= 1'b0;
+                    if (start) begin
+                        state <= CONFIG;
+                    end
+                end
+                LOAD_K_TO_SA: begin
+                    load_kernel <= 1'b1;
+                    kernel_index <= 2'd0;
 
+                    if (counter > CYCLES_PER_KERNEL_LOAD) begin
+                        state <= COMPUTE;
+                        counter <= 0;
+                    end else begin
+                        counter <= counter + 1;
+                    end
+                end
+                COMPUTE: begin
+                    systolic_data_valid <= 1'b1;
 
+                    // if (counter > (cfg_N * cfg_K)) begin
+                    //     systolic_data_valid <= 1'b0;
+                    //     counter <= 0;
+                    // end else begin
+                    //     counter <= counter + 1;
+                    // end
+                end
                 default: state <= IDLE;
             endcase
         end
