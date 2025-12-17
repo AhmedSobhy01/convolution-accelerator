@@ -9,13 +9,11 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
     output wire [INPUT_WIDTH-1:0] out_down,
     output wire [INPUT_WIDTH-1:0] out_right
 );
-    reg [DATA_WIDTH-1:0] partial_sum;
     reg [INPUT_WIDTH-1:0] top_reg;
     reg [INPUT_WIDTH-1:0] left_reg;
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin
-            partial_sum   <= 0;
             top_reg       <= 0;
             left_reg      <= 0;
         end else if (load_kernel_signal) begin
