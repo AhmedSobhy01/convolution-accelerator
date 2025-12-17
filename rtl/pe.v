@@ -24,7 +24,7 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
             partial_sum <= 0;
         end else begin
             top_reg       <= in_input;
-            partial_sum   <= partial_sum + left_reg * top_reg;
+            partial_sum   <= partial_sum + left_reg * in_input;
         end
     end
 
