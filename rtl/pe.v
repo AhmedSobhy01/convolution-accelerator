@@ -21,7 +21,7 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
         end else if (load_kernel_signal) begin
             top_reg     <= in_input;
             left_reg    <= in_kernel;
-            partial_sum <= partial_sum + left_reg * top_reg;
+            partial_sum <= 0;
         end else begin
             top_reg       <= in_input;
             partial_sum   <= partial_sum + left_reg * top_reg;
