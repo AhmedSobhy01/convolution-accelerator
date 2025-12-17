@@ -1,5 +1,5 @@
 module control_unit #(
-    parameter CYCLES_PER_KERNEL_LOAD = 16, // From DRAM to SRAM
+    parameter CYCLES_PER_KERNEL_LOAD = 16,  // From DRAM to SRAM
     parameter FILL_CYCLES = 16,             // Number of cycles to fill the systolic array
     parameter SA_DIM = 8                    // Size of one dimension of the systolic array
 )(
@@ -107,22 +107,50 @@ module control_unit #(
 
                 WAIT_MEM: begin
                     rx_ready <= 1'b1;
+
                     if (rx_valid) begin
-                        start_loading_kernel_to_sram <= 1'b1;
                         state <= LOAD_K_TO_SRAM;
                         counter <= 0;
                     end
-                end  
+                end
 
                 LOAD_K_TO_SRAM: begin
-                    
+                    rx_ready <= 1'b1;
 
+                    // QUESTION: do we need to check on rx_valid here?
+                    if (counter == 0) begin
+                        start_loading_kernel_to_sram <= 1'b1;
+                    end
+
+                    if (counter >= (cfg_K * cfg_K) / 4) begin
+                        state <= LOAD_I_TO_SRAM;
+                        counter <= 0;
+                    end else begin
+                        counter <= counter + 1;
+                    end
+                end
+
+                LOAD_I_TO_SRAM: begin
+                    rx_ready <= 1'b1;
+
+                    // QUESTION: do we need to check on rx_valid here?
+                    if (counter == 0) begin
+                        start_loading_image_to_sram <= 1'b1;
+                    end
+
+                    if (counter >= (cfg_N * cfg_N) / 4) begin
+                        state <= LOAD_K_TO_SA;
+                        counter <= 0;
+                    end else begin
+                        counter <= counter + 1;
+                    end
                 end
 
                 LOAD_K_TO_SA: begin
                     load_kernel <= 1'b1;
                     kernel_index <= 2'd0;
 
+                    // TODO: This needs to be a computed value and needs to handle K > SA_SIZE condition
                     if (counter > CYCLES_PER_KERNEL_LOAD) begin
                         state <= COMPUTE;
                         counter <= 0;
