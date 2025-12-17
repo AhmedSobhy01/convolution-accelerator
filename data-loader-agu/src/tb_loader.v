@@ -45,7 +45,7 @@ module tb_load_image_to_sram;
 
   // We will use Port1 to read back (simpler)
   reg         sram_p1_en;
-  reg  [11:0] sram_p1_addr;
+  reg  [10:0] sram_p1_addr;
   wire [63:0] sram_p1_rdata;
 
   // power nets for macros
@@ -59,7 +59,7 @@ module tb_load_image_to_sram;
   // DUT: data loader (padded stream expected)
   // -------------------------
   data_loader_padded_calc #(
-    .ADDR_W(12),
+    .ADDR_W(11),
     .KER_BASE_BYTE(16'd4096)
   ) u_loader (
     .clk(clk),
@@ -74,11 +74,11 @@ module tb_load_image_to_sram;
     .rx_valid(rx_valid),
     .rx_ready(rx_ready),
 
-    .sram_en(sram_p0_en),
-    .sram_we(sram_p0_we),
-    .sram_addr(sram_p0_addr),
-    .sram_wdata(sram_p0_wdata),
-    .sram_wmask(sram_p0_wmask)
+    .sram0_en(sram_p0_en),
+    .sram0_we(sram_p0_we),
+    .sram0_addr(sram_p0_addr),
+    .sram0_wdata(sram_p0_wdata),
+    .sram0_wmask(sram_p0_wmask)
   );
 
   // -------------------------
