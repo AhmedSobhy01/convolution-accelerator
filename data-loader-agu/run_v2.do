@@ -12,7 +12,8 @@ vlog -timescale 1ns/1ps \
 	Python_scripts/macro_files/V_BB/sky130_sram_2kbyte_1rw1r_32x512_8.v \
 	Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_32x256_8.v \
 	Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_8x1024_8.v \
-	src/data_loader.v src/memory_generator_sky130_64_4096_2.v src/sram_wrapper.v src/tb_loader.v
+	designs/SRAM_64_2048_2_grid/src/memory_generator_sky130_64_2048_2.v \
+	src/data_loader.v src/sram_wrapper.v src/tb_loader.v
 
 # load the testbench (work library)
 vsim work.tb_load_image_to_sram -voptargs=+acc
