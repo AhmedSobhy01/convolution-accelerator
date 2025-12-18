@@ -18,6 +18,8 @@ vlog -work work src/sram1_wrapper.v
 # 4) Compile RTL + TB
 vlog -work work src/dl_dma_rx.v
 vlog -work work src/tb_loader.v
+vlog -work work src/byte_window_streamer.v
+vlog -work work src/sram0_selector.v
 
 vsim -t 1ns -voptargs=+acc work.tb_loader
 # # Add waves (use explicit top scope)
