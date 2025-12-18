@@ -21,14 +21,11 @@ module shift_register #(parameter SHIFT_SIZE = 4, DATA_WIDTH = 32)
     // 0*SHIFT_SIZE + 0*DATA_WIDTH
     // 1*SHIFT_SIZE + 1*DATA_WIDTH
     // 2*SHIFT_SIZE + 2*DATA_WIDTH
-    integer k, idx;
-    always @(*) begin
-        for (k = 0; k < SHIFT_SIZE; k = k + 1) begin
-            idx = k*SHIFT_SIZE*DATA_WIDTH + k*DATA_WIDTH;
-            shift_reg[idx +: DATA_WIDTH] = in_data[k*DATA_WIDTH +: DATA_WIDTH];
+    genvar k;
+    generate
+        for (k = 0; k < SHIFT_SIZE; k = k + 1) begin : out_gen
+            assign out_data[k*DATA_WIDTH +: DATA_WIDTH] = shift_reg[(((SHIFT_SIZE - 1 - k) * SHIFT_SIZE + k) * DATA_WIDTH) +: DATA_WIDTH];
         end
-    end
-
-    assign out_data = shift_reg;
+    endgenerate
 
 endmodule

@@ -23,7 +23,8 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .load_kernel_signal(load_kernel_signal),
                 .in_input(input_in[0 +: INPUT_WIDTH]),
                 .in_kernel(kernel_in[0 +: INPUT_WIDTH]),
-                .out_psum(32'd0),
+                .in_psum(0),
+                .out_psum(pe_out_psum[i][j]),
                 .out_input(pe_input[i][j]),
                 .out_kernel(pe_kernel_out[i][j])
                 );
@@ -33,7 +34,8 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
                 .in_input(input_in[j*INPUT_WIDTH +: INPUT_WIDTH]),
-                .in_kernel(32'd0),
+                .in_kernel(pe_kernel_out[i][j-1]),
+                .in_psum(0),
                 .out_psum(pe_out_psum[i][j]),
                 .out_input(pe_input[i][j]),
                 .out_kernel(pe_kernel_out[i][j])
@@ -43,8 +45,9 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .clk(clk),
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
-                .in_input(pe_input[i-1][ARRAY_SIZE-1]),
+                .in_input(pe_input[i-1][j+1]),
                 .in_kernel(kernel_in[i*INPUT_WIDTH +: INPUT_WIDTH]),
+                .in_psum(pe_out_psum[i-1][j]),
                 .out_psum(pe_out_psum[i][j]),
                 .out_input(pe_input[i][j]),
                 .out_kernel(pe_kernel_out[i][j])
@@ -55,7 +58,8 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
                 .in_input(pe_input[i-1][0]),
-                .in_kernel(pe_kernel_out[i-1][j]),
+                .in_kernel(pe_kernel_out[i][j-1]),
+                .in_psum(pe_out_psum[i-1][j]),
                 .out_psum(pe_out_psum[i][j]),
                 .out_input(pe_input[i][j]),
                 .out_kernel(pe_kernel_out[i][j])
@@ -65,8 +69,9 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .clk(clk),
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
-                .in_input(pe_input[i-1][j-1]),
-                .in_kernel(pe_kernel_out[i-1][j]),
+                .in_input(pe_input[i-1][j+1]),
+                .in_kernel(pe_kernel_out[i][j-1]),
+                .in_psum(pe_out_psum[i-1][j]),
                 .out_psum(pe_out_psum[i][j]),
                 .out_input(pe_input[i][j]),
                 .out_kernel(pe_kernel_out[i][j])
@@ -76,7 +81,6 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
     end
     endgenerate
 
-    genvar i;
     wire [ARRAY_SIZE*DATA_WIDTH-1:0] last_row_flat;
     wire [ARRAY_SIZE*DATA_WIDTH-1:0] sum_partials;
     generate
@@ -86,21 +90,23 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
     endgenerate
 
 
-    shift_register #(.SHIFT_SIZE(ARRAY_SIZE), .DATA_WIDTH(INPUT_WIDTH)) input_shift_reg (
+    shift_register #(.SHIFT_SIZE(ARRAY_SIZE), .DATA_WIDTH(DATA_WIDTH)) input_shift_reg (
         .clk(clk),
         .rst(rst),
         .in_data(last_row_flat),
         .out_data(sum_partials)
     );
 
-    // split sum_partials to 3 DATA_WIDTH parts and sum them
-    genvar k;
-    wire [DATA_WIDTH-1:0] final_sum;
-    generate
-        for (k = 0; k < ARRAY_SIZE; k = k + 1) begin : sum_loop
-            assign final_sum = final_sum + sum_partials[(k+1)*DATA_WIDTH-1 -: DATA_WIDTH];
+    // sum_partials now is DATA_WIDTH*ARRAY_SIZE bits
+    // We need to sum every DATA_WIDTH bits together
+    reg [DATA_WIDTH-1:0] sum_reg;
+    integer k;
+    always @(*) begin
+        sum_reg = 0;
+        for (k = 0; k < ARRAY_SIZE; k = k + 1) begin
+            sum_reg = sum_reg + sum_partials[k*DATA_WIDTH +: DATA_WIDTH];
         end
-    endgenerate
+    end
 
-    assign out_data = rst ? {DATA_WIDTH{1'b0}} : sum_partials;
+    assign out_data = sum_reg;
 endmodule

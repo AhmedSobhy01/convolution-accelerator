@@ -98,7 +98,7 @@ module systolic_array_tb;
             end
 
             input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
-            repeat (ARRAY_SIZE) @(posedge clk);
+            repeat (2 * ARRAY_SIZE + 5) @(posedge clk);
             outputs_valid = 1'b0;
         end
     endtask
@@ -153,7 +153,7 @@ module systolic_array_tb;
         if (!rst && outputs_valid) begin
             cycle_after_input_start = cycle_after_input_start + 1;
 
-            if (cycle_after_input_start >= ARRAY_SIZE && capture_idx < INPUT_DEPTH) begin
+            if (cycle_after_input_start >= 2 * ARRAY_SIZE && capture_idx < INPUT_DEPTH) begin
                 captured_outputs[capture_idx] = out_data;
                 capture_idx = capture_idx + 1;
             end
@@ -176,19 +176,29 @@ module systolic_array_tb;
         // [20 40 50]
         // [10 20 30]
         // [100 10 60]
-        kernel_vectors[0] = {8'd20, 8'd10, 8'd100};
-        kernel_vectors[1] = {8'd40, 8'd20, 8'd10};
-        kernel_vectors[2] = {8'd50, 8'd30, 8'd60};
 
-        input_vectors[0] = {8'd12, 8'd52, 8'd32}; // [12, 52, 32]
-        input_vectors[1] = {8'd20, 8'd18, 8'd28}; // [20, 18, 28]
-        input_vectors[2] = {8'd34, 8'd37, 8'd1}; // [34, 37, 1]
-        input_vectors[3] = {8'd9, 8'd6, 8'd28}; // [9, 6, 28]
-        input_vectors[4] = {8'd22, 8'd98, 8'd32}; // [22, 98, 32]
-        input_vectors[5] = {8'd18, 8'd12, 8'd17}; // [18, 12, 17]
-        input_vectors[6] = {8'd88, 8'd72, 8'd62}; // [88, 72, 62]
-        input_vectors[7] = {8'd42, 8'd23, 8'd28}; // [42, 23, 28]
-        input_vectors[8] = {8'd29, 8'd56, 8'd2}; // [29, 56, 2]
+        // we transpose it
+        // [20 10 100]
+        // [40 20 10]
+        // [50 30 60]
+
+        // we rotate every column by its index
+        // [20 20 60]
+        // [40 30 100]
+        // [50 10 10]
+        kernel_vectors[0] = {8'd10, 8'd100, 8'd60};
+        kernel_vectors[1] = {8'd10, 8'd30, 8'd20};
+        kernel_vectors[2] = {8'd50, 8'd40, 8'd20};
+
+        input_vectors[0] = {8'd32, 8'd52, 8'd12}; // [12, 52, 32]
+        input_vectors[1] = {8'd28, 8'd18, 8'd20}; // [20, 18, 28]
+        input_vectors[2] = {8'd1, 8'd37, 8'd34}; // [34, 37, 1]
+        input_vectors[3] = {8'd28, 8'd6, 8'd9}; // [9, 6, 28]
+        input_vectors[4] = {8'd32, 8'd98, 8'd22}; // [22, 98, 32]
+        input_vectors[5] = {8'd17, 8'd12, 8'd18}; // [18, 12, 17]
+        input_vectors[6] = {8'd62, 8'd72, 8'd88}; // [88, 72, 62]
+        input_vectors[7] = {8'd28, 8'd23, 8'd42}; // [42, 23, 28]
+        input_vectors[8] = {8'd2, 8'd56, 8'd29}; // [29, 56, 2]
 
         expected_outputs[0] = 32'd9150;
         expected_outputs[1] = 32'd6270;
@@ -230,6 +240,7 @@ module systolic_array_tb;
 
         @(negedge clk);
         load_kernel_signal = 1'b0;
+        cycle_after_input_start = 0;
         outputs_valid      = 1'b1;
         output_idx         = 0;
         input_in           = input_vectors[0];
@@ -251,9 +262,10 @@ module systolic_array_tb;
             input_in = input_vectors[idx];
             @(posedge clk);
         end
+        @(negedge clk);
 
         input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
-        repeat (ARRAY_SIZE) @(posedge clk);
+        repeat (2 * ARRAY_SIZE + 5) @(posedge clk);
         outputs_valid = 1'b0;
 
         verify_outputs("Basic Convolution");
