@@ -19,11 +19,11 @@ vlog -work work src/sram1_wrapper.v
 vlog -work work src/dl_dma_rx.v
 vlog -work work src/tb_loader.v
 
-vsim -t 1ns work.tb_loader
+vsim -t 1ns -voptargs=+acc work.tb_loader
 # # Add waves (use explicit top scope)
 # add wave -r sim:/tb_loader/*
 # # (optional) include deeper hierarchy too
-# add wave -r sim:/tb_loader/u_dl/*
-# add wave -r sim:/tb_loader/u_sram0/*
+add wave -r sim:/tb_loader/dut/*
+add wave -r sim:/tb_loader/u_sram0/*
 # add wave -r sim:/tb_loader/u_sram1/*
 run -all
