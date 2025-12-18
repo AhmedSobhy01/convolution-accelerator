@@ -22,8 +22,14 @@ add wave -hex sim:/tb_drain/done
 add wave -hex sim:/tb_drain/dut/state
 
 add wave -divider {SRAM Read}
+add wave -hex sim:/tb_drain/drain_en
 add wave -hex sim:/tb_drain/drain_addr
 add wave -hex sim:/tb_drain/sram_rdata_drain
+add wave -hex sim:/tb_drain/tb_en
+add wave -hex sim:/tb_drain/tb_we
+add wave -hex sim:/tb_drain/tb_addr
+add wave -hex sim:/tb_drain/tb_wdata
+add wave -hex sim:/tb_drain/tb_wmask
 add wave -hex sim:/tb_drain/dut/computed_pixel
 
 add wave -divider {DRAM Output}
