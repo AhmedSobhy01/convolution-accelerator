@@ -1,7 +1,6 @@
 module control_unit #(
-    parameter CYCLES_PER_KERNEL_LOAD = 16,  // From DRAM to SRAM
-    parameter FILL_CYCLES = 16,             // Number of cycles to fill the systolic array
-    parameter SA_DIM = 8                    // Size of one dimension of the systolic array
+    parameter SA_DIM = 8,                    // Size of one dimension of the systolic array
+    parameter SA_INPUT_FILL_TIME = 8                 // Number of cycles to wait to fill the systolic array
 )(
     input  wire clk,
     input  wire rst_n,
@@ -52,10 +51,9 @@ module control_unit #(
         LOAD_K_TO_SA       = 4'd7,
         WAIT_LOADING_K_TO_SA = 4'd8,
         COMPUTE            = 4'd9,
-        ACCUMULATE_OUTPUT  = 4'd10,
-        WAIT_MEM_OUT       = 4'd11,
-        STORE_OUT          = 4'd12,
-        DONE_STATE         = 4'd13;
+        WAIT_MEM_OUT       = 4'd10,
+        STORE_OUT          = 4'd11,
+        DONE_STATE         = 4'd12;
 
     reg [3:0] state;
 
@@ -65,6 +63,8 @@ module control_unit #(
     reg kernel_bigger_than_sa;       // Flag to indicate if K > SA_SIZE
     reg [2:0] total_kernel_parts;    // Total number of kernel parts to load (for K > SA_SIZE)
     reg [1: 0] tiles_per_dim;        // Number of tiles per dimension when K > SA_SIZE (K / SA_DIM)
+    reg [7: 0] sa_rows_counter;      // Number of rows processed in the systolic array
+    reg [7: 0] sa_cols_counter;      // Number of columns processed in the systolic array
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -102,8 +102,11 @@ module control_unit #(
                     kernel_bigger_than_sa <= (cfg_K > SA_DIM) ? 1'b1 : 1'b0;
                     
                     if (cfg_K > SA_DIM) begin
-                        tiles_per_dim <= (cfg_K + SA_DIM - 1) / SA_DIM; // Ceiling division
-                        total_kernel_parts <= tiles_per_dim * tiles_per_dim; // Ceiling division
+                        tiles_per_dim <= (cfg_K / SA_DIM);
+                        if ((cfg_K % SA_DIM) != 0) begin
+                            tiles_per_dim <= tiles_per_dim + 1;
+                        end
+                        total_kernel_parts <= tiles_per_dim * tiles_per_dim;
                     end else begin
                         total_kernel_parts <= 3'd1;
                     end
@@ -160,9 +163,6 @@ module control_unit #(
 
                 LOAD_K_TO_SA: begin
                     load_kernel <= 1'b1;
-                    kernel_index <= 2'd0;
-                    // kernel parts -> number of indices
-
 
                     // TODO: This needs to be a computed value and needs to handle K > SA_SIZE condition
                     if (dl_busy) begin
@@ -172,6 +172,8 @@ module control_unit #(
 
                 WAIT_LOADING_K_TO_SA: begin
                     load_kernel <= 1'b1;
+                    sa_rows_counter <= 8'd0;
+                    sa_cols_counter <= 8'd0;
 
                     if (!dl_busy) begin
                         state <= COMPUTE;
@@ -180,7 +182,37 @@ module control_unit #(
 
                 COMPUTE: begin
                     systolic_data_valid <= 1'b1;
+                    sa_rows_counter <= sa_rows_counter + 1;
 
+                    // Wait to fill cycles
+                    if (sa_rows_counter > SA_INPUT_FILL_TIME) begin
+                        systolic_data_valid <= 1'b1;
+                    end else begin
+                        systolic_data_valid <= 1'b0;
+                    end 
+
+                    // If all rows processed, move to next column
+                    if (sa_rows_counter >= cfg_N) begin
+                        sa_cols_counter <= sa_cols_counter + 1;
+                    end
+                    
+                    // If column processed, set sa_data_valid to 0 till loading next column
+                    // Update rows counter according to overlapped time between loading and storing
+                    if (sa_rows_counter >= SA_INPUT_FILL_TIME + (cfg_N - cfg_K + 1)) begin
+                        systolic_data_valid <= 1'b0;
+                        sa_rows_counter <= (SA_INPUT_FILL_TIME - cfg_K + 1); 
+                    end
+
+                    // If all columns processed, check for more kernel parts and move to loading next kernel part or accumlation
+                    // Or move to wait for DRAM
+                    if (sa_cols_counter >= cfg_N) begin 
+                        if (kernel_index < (total_kernel_parts - 1)) begin
+                            kernel_index <= kernel_index + 1;
+                            state <= LOAD_K_TO_SA;
+                        end else begin
+                            state <= WAIT_MEM_OUT;
+                        end
+                    end
                 end
                 default: state <= IDLE;
             endcase
