@@ -11,6 +11,9 @@ module control_unit #(
     input  wire [3:0] cfg_K,
     output reg  done,
 
+    // Data loader is sending data to DRAM (kernel/image)
+    input wire dl_busy,
+
     // Input data stream from DRAM to Data Loader
     output reg  rx_ready, // ready to receive from DRAM
     input  wire rx_valid, // DRAM has valid data
@@ -43,13 +46,16 @@ module control_unit #(
         CONFIG             = 4'd1,
         WAIT_MEM           = 4'd2,
         LOAD_K_TO_SRAM     = 4'd3,
-        LOAD_I_TO_SRAM     = 4'd4,
-        LOAD_K_TO_SA       = 4'd5,
-        COMPUTE            = 4'd6,
-        ACCUMULATE_OUTPUT  = 4'd8,
-        WAIT_MEM_OUT       = 4'd9,
-        STORE_OUT          = 4'd10,
-        DONE_STATE         = 4'd11;
+        WAIT_LOADING_KERNEL_TO_SRAM = 4'd4,
+        LOAD_I_TO_SRAM     = 4'd5,
+        WAIT_LOADING_IMAGE_TO_SRAM = 4'd6,
+        LOAD_K_TO_SA       = 4'd7,
+        WAIT_LOADING_K_TO_SA = 4'd8,
+        COMPUTE            = 4'd9,
+        ACCUMULATE_OUTPUT  = 4'd10,
+        WAIT_MEM_OUT       = 4'd11,
+        STORE_OUT          = 4'd12,
+        DONE_STATE         = 4'd13;
 
     reg [3:0] state;
 
@@ -116,57 +122,65 @@ module control_unit #(
 
                 LOAD_K_TO_SRAM: begin
                     rx_ready <= 1'b1;
+                    start_loading_kernel_to_sram <= 1'b1;
 
-                    // QUESTION: do we need to check on rx_valid here?
-                    if (counter == 0) begin
-                        start_loading_kernel_to_sram <= 1'b1;
+                    // QUESTION: do we need to check on rx_valid here?                
+                    if (dl_busy) begin
+                        state <= WAIT_LOADING_KERNEL_TO_SRAM;
                     end
+                end
+                
+                WAIT_LOADING_KERNEL_TO_SRAM: begin
+                    rx_ready <= 1'b1;
+                    start_loading_kernel_to_sram <= 1'b1;
 
-                    if (counter >= (cfg_K * cfg_K) / 4) begin
+                    if (!dl_busy) begin
                         state <= LOAD_I_TO_SRAM;
-                        counter <= 0;
-                    end else begin
-                        counter <= counter + 1;
                     end
                 end
 
                 LOAD_I_TO_SRAM: begin
                     rx_ready <= 1'b1;
+                    start_loading_image_to_sram <= 1'b1;
 
                     // QUESTION: do we need to check on rx_valid here?
-                    if (counter == 0) begin
-                        start_loading_image_to_sram <= 1'b1;
+                    if (dl_busy) begin
+                        state <= WAIT_LOADING_IMAGE_TO_SRAM;
                     end
+                end
 
-                    if (counter >= (cfg_N * cfg_N) / 4) begin
+                WAIT_LOADING_IMAGE_TO_SRAM: begin
+                    rx_ready <= 1'b1;
+                    start_loading_image_to_sram <= 1'b1;
+
+                    if (!dl_busy) begin
                         state <= LOAD_K_TO_SA;
-                        counter <= 0;
-                    end else begin
-                        counter <= counter + 1;
                     end
                 end
 
                 LOAD_K_TO_SA: begin
                     load_kernel <= 1'b1;
                     kernel_index <= 2'd0;
+                    // kernel parts -> number of indices
+
 
                     // TODO: This needs to be a computed value and needs to handle K > SA_SIZE condition
-                    if (counter > CYCLES_PER_KERNEL_LOAD) begin
-                        state <= COMPUTE;
-                        counter <= 0;
-                    end else begin
-                        counter <= counter + 1;
+                    if (dl_busy) begin
+                        state <= WAIT_LOADING_K_TO_SA;
                     end
                 end
+
+                WAIT_LOADING_K_TO_SA: begin
+                    load_kernel <= 1'b1;
+
+                    if (!dl_busy) begin
+                        state <= COMPUTE;
+                    end
+                end
+
                 COMPUTE: begin
                     systolic_data_valid <= 1'b1;
 
-                    // if (counter > (cfg_N * cfg_K)) begin
-                    //     systolic_data_valid <= 1'b0;
-                    //     counter <= 0;
-                    // end else begin
-                    //     counter <= counter + 1;
-                    // end
                 end
                 default: state <= IDLE;
             endcase
