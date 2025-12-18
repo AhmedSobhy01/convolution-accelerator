@@ -1,29 +1,29 @@
-# run_tb_loader.do
-# Compile Verilog sources in ./src and run the testbench tb_load_image_to_sram
-# Usage (GUI):  vsim -do run_tb_loader.do
-# Usage (batch): vsim -c -do run_tb_loader.do
-
-# create work library
+transcript on
+if {[file exists work]} { vdel -lib work -all }
 vlib work
-vmap work ./work
 
-# compile all sources in src/
-vlog -timescale 1ns/1ps \
-	Python_scripts/macro_files/V_BB/sky130_sram_2kbyte_1rw1r_32x512_8.v \
-	Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_32x256_8.v \
-	Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_8x1024_8.v \
-	designs/SRAM_64_2048_2_grid/src/memory_generator_sky130_64_2048_2.v \
-	src/data_loader.v src/sram_wrapper.v src/tb_loader.v
+# 1) Compile SRAM macro leaf models first
+vlog -work work Python_scripts/macro_files/V_BB/sky130_sram_2kbyte_1rw1r_32x512_8.v
+vlog -work work Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_32x256_8.v
+vlog -work work Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_8x1024_8.v
 
-# load the testbench (work library)
-vsim work.tb_load_image_to_sram -voptargs=+acc
+# 2) Compile generated memories
+vlog -work work designs/SRAM_64_1024_2_grid/src/memory_generator_sky130_64_1024_2.v
+vlog -work work designs/SRAM_32_4096_1_grid/src/memory_generator_sky130_32_4096_1.v
 
-# optional: show all signals in waveform window
-add wave -recursive /tb_load_image_to_sram/*
-view wave
+# 3) Compile your wrappers
+vlog -work work src/sram0_wrapper.v
+vlog -work work src/sram1_wrapper.v
 
-# run simulation until $stop/$finish in the testbench
+# 4) Compile RTL + TB
+vlog -work work src/dl_dma_rx.v
+vlog -work work src/tb_loader.v
+
+vsim -t 1ns work.tb_loader
+# # Add waves (use explicit top scope)
+# add wave -r sim:/tb_loader/*
+# # (optional) include deeper hierarchy too
+# add wave -r sim:/tb_loader/u_dl/*
+# add wave -r sim:/tb_loader/u_sram0/*
+# add wave -r sim:/tb_loader/u_sram1/*
 run -all
-
-# # quit simulator when finished (use -f to force)
-# quit -f
