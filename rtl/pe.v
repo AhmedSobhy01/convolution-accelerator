@@ -10,7 +10,7 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
     output wire [INPUT_WIDTH-1:0] out_input,
     output wire [INPUT_WIDTH-1:0] out_kernel
 );
-    reg [DATA_WIDTH-1:0] partial_sum = 0;
+    reg [DATA_WIDTH-1:0] partial_sum;
     reg [INPUT_WIDTH-1:0] top_reg;
     reg [INPUT_WIDTH-1:0] left_reg;
 
@@ -18,6 +18,7 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
         if (rst) begin
             top_reg       <= 0;
             left_reg      <= 0;
+            partial_sum   <= 0;
         end else if (load_kernel_signal) begin
             top_reg     <= in_input;
             left_reg    <= in_kernel;

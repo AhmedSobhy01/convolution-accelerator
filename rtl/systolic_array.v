@@ -108,5 +108,5 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
         end
     end
 
-    assign out_data = sum_reg;
+    assign out_data = rst ? {DATA_WIDTH{1'b0}} : sum_reg;
 endmodule
