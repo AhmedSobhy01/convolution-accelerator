@@ -251,6 +251,7 @@ module systolic_array_tb;
             input_in = input_vectors[idx];
             @(posedge clk);
         end
+        @(negedge clk);
 
         input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
         repeat (ARRAY_SIZE) @(posedge clk);
