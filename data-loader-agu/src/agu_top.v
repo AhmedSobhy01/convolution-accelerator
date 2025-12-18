@@ -58,6 +58,9 @@ module agu_top #(
 
   reg [2:0] state;
 
+  wire vccd1 = 1'b1;
+  wire vssd1 = 1'b0;
+
   // Counters for Streaming
   reg [6:0] row_cnt;
   
@@ -114,10 +117,11 @@ module agu_top #(
   // If Split: K/2. If Normal: K.
   reg [6:0] active_k_dim;
   always @(*) begin
-    if (cfg_split_mode) 
+    if (cfg_split_mode) begin
       active_k_dim = half_K[6:0];
-    else 
-      active_k_dim = cfg_K[6:0];
+    end else begin
+      active_k_dim = K16[6:0];
+    end
   end
 
   // Column Streaming limits
@@ -127,17 +131,17 @@ module agu_top #(
   always @(*) begin
     if (cfg_split_mode) begin
        // Bottom sub-kernels start at offset K/2
-       if (cfg_ker_idx >= 2) begin 
-         col_start_row = half_K;
-         col_end_row   = N16; 
-       end else begin
+      if (cfg_ker_idx >= 2) begin 
+        col_start_row = half_K;
+        col_end_row   = N16; 
+      end else begin
          // Top sub-kernels end at N - K/2
-         col_start_row = 16'd0;
-         col_end_row   = N16 - half_K; 
-       end
+        col_start_row = 16'd0;
+        col_end_row   = N16 - half_K; 
+      end
     end else begin
-       col_start_row = 16'd0;
-       col_end_row   = N16;
+      col_start_row = 16'd0;
+      col_end_row   = N16;
     end
   end
 
@@ -183,7 +187,9 @@ module agu_top #(
     .clk(clk),
     .p0_en(sram0_p0_en), .p0_we(sram0_p0_we), .p0_addr(sram0_p0_addr),
     .p0_wdata(sram0_p0_wdata), .p0_wmask(sram0_p0_wmask), .p0_rdata(sram0_p0_rdata),
-    .p1_en(sram0_p1_en), .p1_addr(sram0_p1_addr), .p1_rdata(sram0_p1_rdata)
+    .p1_en(sram0_p1_en), .p1_addr(sram0_p1_addr), .p1_rdata(sram0_p1_rdata),
+    // power pins
+    .vccd1(vccd1), .vssd1(vssd1)
   );
 
   wire wb_busy;
@@ -211,7 +217,9 @@ module agu_top #(
     .clk(clk),
     .p0_en(wb_en), .p0_we(wb_we), .p0_addr(wb_addr),
     .p0_wdata(wb_wdata), .p0_wmask(wb_wmask), .p0_rdata(), 
-    .p1_en(drain_en), .p1_addr(drain_addr), .p1_rdata(drain_rdata) 
+    .p1_en(drain_en), .p1_addr(drain_addr), .p1_rdata(drain_rdata),
+    // power pins
+    .vccd1(vccd1), .vssd1(vssd1)
   );
 
   // ===========================================================================
