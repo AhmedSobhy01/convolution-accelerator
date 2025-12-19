@@ -12,6 +12,7 @@ module kernel_and_window_streamer #(
   input  wire [4:0]   cfg_K,
 
   input  wire         start_load_kernel,
+  input  wire [1:0]   kernel_idx,
   output reg          kernel_done,
 
   input  wire         start_stream_window,
@@ -37,6 +38,37 @@ module kernel_and_window_streamer #(
   wire [15:0] row_bytes = N16;
   wire [15:0] col_bytes = K16;
 
+  wire [15:0] k_lo  = K16 >> 1;            // floor(K/2)
+  wire [15:0] k_hi  = K16 - k_lo;          // ceil(K/2)
+  wire        k_big = (cfg_K > 5'd8);
+
+  // Which half in rows?
+  wire ker_top = (kernel_idx == 2'd0) || (kernel_idx == 2'd1);
+  wire ker_bot = (kernel_idx == 2'd2) || (kernel_idx == 2'd3);
+
+  // Which half in columns?
+  wire ker_left  = (kernel_idx == 2'd0) || (kernel_idx == 2'd2);
+  wire ker_right = (kernel_idx == 2'd1) || (kernel_idx == 2'd3);
+
+  // Row range
+  wire [15:0] ker_row_start = (!k_big) ? 16'd0 :
+                              (ker_top ? 16'd0 : k_lo);
+
+  wire [15:0] ker_rows_total = (!k_big) ? K16 :
+                              (ker_top ? k_lo : k_hi);
+
+  // Column offset + length
+  wire [15:0] ker_col_off  = (!k_big) ? 16'd0 :
+                            (ker_left ? 16'd0 : k_lo);
+
+  wire [2:0]  ker_len_bytes = (!k_big) ? cfg_K[2:0] :
+                              (ker_left ? k_lo[2:0] : k_hi[2:0]);
+
+  wire img_is_top = (kernel_idx == 2'd0) || (kernel_idx == 2'd1);
+
+  wire [15:0] img_row_start = img_is_top ? 16'd0 : k_lo;
+  wire [15:0] img_rows_total = N16 - k_lo;
+
   localparam IDLE        = 2'd0;
   localparam LOAD_KERNEL = 2'd1;
   localparam STREAM_WIN  = 2'd2;
@@ -47,8 +79,14 @@ module kernel_and_window_streamer #(
   reg [6:0] row_cnt;
   reg [6:0] row_resp_cnt;
 
-  wire [15:0] ker_col_addr = KER_BASE_BYTE + col_cnt * col_bytes;
-  wire [15:0] img_row_addr = IMG_BASE_BYTE + window_col + row_cnt * row_bytes;
+  wire [15:0] ker_row = ker_row_start + col_cnt;
+
+  wire [15:0] ker_col_addr = KER_BASE_BYTE + ker_row * col_bytes + ker_col_off;
+  wire [15:0] img_row_addr = IMG_BASE_BYTE + window_col + (img_row_start + row_cnt) * row_bytes;
+
+  wire [2:0] img_len_bytes =
+    (!k_big) ? cfg_K[2:0] :
+    (ker_right ? k_hi[2:0] : k_lo[2:0]);
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -79,7 +117,7 @@ module kernel_and_window_streamer #(
           col_resp_cnt <= col_resp_cnt + 1'b1;
           
           // Check if all responses received
-          if (col_resp_cnt + 1'b1 >= cfg_K) begin
+          if (col_resp_cnt + 1'b1 >= ker_rows_total) begin
             kernel_done <= 1'b1;
           end
         end else if (state == STREAM_WIN) begin
@@ -87,7 +125,7 @@ module kernel_and_window_streamer #(
           p_data  <= reader_resp_data;
           row_resp_cnt <= row_resp_cnt + 1'b1;
           
-          if (row_resp_cnt + 1'b1 >= cfg_N) begin
+          if (row_resp_cnt + 1'b1 >= img_rows_total) begin
             window_done <= 1'b1;
           end
         end
@@ -114,29 +152,30 @@ module kernel_and_window_streamer #(
 
         LOAD_KERNEL: begin
           // Issue requests every cycle until done
-          if (col_cnt < cfg_K) begin
+          if (col_cnt < ker_rows_total) begin
             reader_byte_addr <= ker_col_addr;
-            reader_len_bytes <= cfg_K[2:0];
+            reader_len_bytes <= ker_len_bytes;
             reader_req_valid <= 1'b1;
             col_cnt <= col_cnt + 1'b1;
           end else begin
             reader_req_valid <= 1'b0;
             // Wait for all responses, then go idle
-            if (col_resp_cnt >= cfg_K) begin
+            if (col_resp_cnt >= ker_rows_total) begin
               state <= IDLE;
             end
           end
         end
 
         STREAM_WIN: begin
-          if (row_cnt < cfg_N) begin
+          if (row_cnt < img_rows_total) begin
             reader_byte_addr <= img_row_addr;
-            reader_len_bytes <= cfg_K[2:0];
+            reader_len_bytes <= img_len_bytes;
             reader_req_valid <= 1'b1;
             row_cnt <= row_cnt + 1'b1;
           end else begin
             reader_req_valid <= 1'b0;
-            if (row_resp_cnt >= cfg_N) begin
+            // Wait for all responses, then go idle
+            if (row_resp_cnt >= img_rows_total) begin
               state <= IDLE;
             end
           end
