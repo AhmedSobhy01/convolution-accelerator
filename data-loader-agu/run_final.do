@@ -100,13 +100,26 @@ add wave -noupdate -group "Writeback" -color "Violet" -radix unsigned /tb_conv_a
 add wave -noupdate -group "Writeback" -color "Green"                  /tb_conv_accelerator/dut/u_writeback/sram_we
 add wave -noupdate -group "Writeback" -color "Cyan"   -radix hex      /tb_conv_accelerator/dut/u_writeback/sram_addr
 add wave -noupdate -group "Writeback" -color "Cyan"   -radix hex      /tb_conv_accelerator/dut/u_writeback/sram_wdata
+add wave -noupdate -group "Writeback" -color "Cyan"   -radix hex      /tb_conv_accelerator/dut/u_writeback/sram_wmask
 
 # Module: Drain (SRAM1 -> DRAM)
 add wave -noupdate -group "Drain" -color "Yellow"                 /tb_conv_accelerator/dut/u_drain/state
 add wave -noupdate -group "Drain" -color "Cyan"   -radix unsigned /tb_conv_accelerator/dut/u_drain/pixel_cnt
 add wave -noupdate -group "Drain" -color "Cyan"   -radix hex      /tb_conv_accelerator/dut/u_drain/sram_rdata
+add wave -noupdate -group "Drain" -color "Orange"                 /tb_conv_accelerator/dut/u_drain/computed_pixel
+add wave -noupdate -group "Drain" -color "Orange"                 /tb_conv_accelerator/dut/u_drain/pack_buf
 add wave -noupdate -group "Drain" -color "Green"  -radix hex      /tb_conv_accelerator/dut/u_drain/tx_data
 add wave -noupdate -group "Drain" -color "Orange"                 /tb_conv_accelerator/dut/u_drain/tx_valid
+add wave -noupdate -group "Drain" -color "Yellow"                 /tb_conv_accelerator/dut/u_drain/clk
+add wave -noupdate -group "Drain" -color "Yellow"                 /tb_conv_accelerator/dut/u_drain/rst_n
+add wave -noupdate -group "Drain" -color "Magenta"                /tb_conv_accelerator/dut/u_drain/start
+add wave -noupdate -group "Drain" -color "Cyan"   -radix unsigned /tb_conv_accelerator/dut/u_drain/cfg_num_pixels
+add wave -noupdate -group "Drain" -color "White"                  /tb_conv_accelerator/dut/u_drain/cfg_split_mode
+add wave -noupdate -group "Drain" -color "Green"                  /tb_conv_accelerator/dut/u_drain/done
+add wave -noupdate -group "Drain" -color "Orange"                 /tb_conv_accelerator/dut/u_drain/sram_en
+add wave -noupdate -group "Drain" -color "Cyan"   -radix unsigned /tb_conv_accelerator/dut/u_drain/sram_addr
+add wave -noupdate -group "Drain" -color "Orange"                 /tb_conv_accelerator/dut/u_drain/tx_ready
+
 
 # ------------------------------------------------------------------------------
 # GROUP: SRAM MONITORS
@@ -118,6 +131,8 @@ add wave -noupdate -group "SRAM0 (Input)" -color "Orange"            /tb_conv_ac
 add wave -noupdate -group "SRAM0 (Input)" -color "Red"               /tb_conv_accelerator/dut/sram0_p0_we
 add wave -noupdate -group "SRAM0 (Input)" -color "Cyan"   -radix hex /tb_conv_accelerator/dut/sram0_p0_addr
 add wave -noupdate -group "SRAM0 (Input)" -color "Green"  -radix hex /tb_conv_accelerator/dut/sram0_p0_wdata
+add wave -noupdate -group "SRAM0 (Input)" -color "Green"  -radix hex /tb_conv_accelerator/dut/sram0_p0_rdata
+add wave -noupdate -group "SRAM0 (Input)" -color "Orange"            /tb_conv_accelerator/dut/sram0_p1_en
 add wave -noupdate -group "SRAM0 (Input)" -color "Cyan"   -radix hex /tb_conv_accelerator/dut/sram0_p1_addr
 add wave -noupdate -group "SRAM0 (Input)" -color "Green"  -radix hex /tb_conv_accelerator/dut/sram0_p1_rdata
 
@@ -126,6 +141,8 @@ add wave -noupdate -group "SRAM1 (Output)" -color "Orange"            /tb_conv_a
 add wave -noupdate -group "SRAM1 (Output)" -color "Red"               /tb_conv_accelerator/dut/sram1_p0_we
 add wave -noupdate -group "SRAM1 (Output)" -color "Cyan"   -radix hex /tb_conv_accelerator/dut/sram1_p0_addr
 add wave -noupdate -group "SRAM1 (Output)" -color "Green"  -radix hex /tb_conv_accelerator/dut/sram1_p0_wdata
+add wave -noupdate -group "SRAM1 (Output)" -color "Green"  -radix hex /tb_conv_accelerator/dut/sram1_p0_rdata
+add wave -noupdate -group "SRAM1 (Output)" -color "Orange"            /tb_conv_accelerator/dut/sram1_p1_en
 add wave -noupdate -group "SRAM1 (Output)" -color "Cyan"   -radix hex /tb_conv_accelerator/dut/sram1_p1_addr
 add wave -noupdate -group "SRAM1 (Output)" -color "Green"  -radix hex /tb_conv_accelerator/dut/sram1_p1_rdata
 
