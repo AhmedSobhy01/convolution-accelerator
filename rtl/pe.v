@@ -3,12 +3,14 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
     input wire clk,
     input wire rst,
     input wire load_kernel_signal,
-    input wire [INPUT_WIDTH-1:0] in_top,
-    input wire [INPUT_WIDTH-1:0] in_left,
-    output wire [DATA_WIDTH-1:0] out_partial,
-    output wire [INPUT_WIDTH-1:0] out_down,
-    output wire [INPUT_WIDTH-1:0] out_right
+    input wire [INPUT_WIDTH-1:0] in_input,
+    input wire [INPUT_WIDTH-1:0] in_kernel,
+    input wire [DATA_WIDTH-1:0] in_psum,
+    output wire [DATA_WIDTH-1:0] out_psum,
+    output wire [INPUT_WIDTH-1:0] out_input,
+    output wire [INPUT_WIDTH-1:0] out_kernel
 );
+    reg [DATA_WIDTH-1:0] partial_sum;
     reg [INPUT_WIDTH-1:0] top_reg;
     reg [INPUT_WIDTH-1:0] left_reg;
 
@@ -16,16 +18,18 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
         if (rst) begin
             top_reg       <= 0;
             left_reg      <= 0;
+            partial_sum   <= 0;
         end else if (load_kernel_signal) begin
-            top_reg     <= in_top;
-            left_reg    <= in_left;
+            top_reg     <= in_input;
+            left_reg    <= in_kernel;
         end else begin
-            top_reg       <= in_top;
+            top_reg       <= in_input;
+            partial_sum   <= (left_reg * in_input) + in_psum;
         end
     end
 
-    assign out_partial = left_reg * top_reg;
-    assign out_down    = top_reg;
-    assign out_right   = left_reg;
+    assign out_psum = partial_sum;
+    assign out_input    = top_reg;
+    assign out_kernel   = left_reg;
 
 endmodule
