@@ -1,109 +1,135 @@
 `timescale 1ns/1ps
 
-module dl_sa_writeback (
+module dl_sa_writeback #(
+  parameter ADDR_W = 12 // SRAM Depth 4096 Words
+)(
   input  wire         clk,
   input  wire         rst_n,
 
   // Config from Control Unit
-  input  wire         cfg_start_pass, // Pulse: Reset pixel counter at start of pass
-  input  wire [1:0]   cfg_ker_idx,    // 0..3: Selects which byte lane to write
+  input  wire         cfg_start_pass, // Pulse: Resets counter to cfg_ker_idx
+  input  wire [1:0]   cfg_ker_idx,    // Sets the initial offset (0, 1, 2, or 3)
 
-  // From Systolic Array (8 pixels valid at once)
+  // From Systolic Array (1 Byte per Valid)
   input  wire         sa_valid,
-  input  wire [63:0]  sa_wdata,
-  output reg          busy,           // High while serializing writes
+  input  wire [7:0]   sa_wdata,       // UPDATED: Just 8 bits
+  output wire         busy,           // FIFO Full
 
   // To SRAM1 Wrapper (Port 0 - Write)
   output reg          sram_en,
   output reg          sram_we,
-  output reg [11:0]   sram_addr,      // 4096 words
+  output reg [ADDR_W-1:0] sram_addr,      
   output reg [31:0]   sram_wdata,
   output reg [3:0]    sram_wmask
 );
 
-  // FSM States
-  localparam ST_IDLE  = 1'b0;
-  localparam ST_WRITE = 1'b1;
-  reg state;
+  // ===========================================================================
+  // 1. Internal FIFO (8-bit width)
+  // ===========================================================================
+  localparam FIFO_DEPTH = 8;
+  localparam PTR_W      = 3; // log2(8)
 
-  // Internal storage
-  reg [63:0] data_buf;    // Buffer for the 8 pixels
-  reg [2:0]  pixel_idx;   // 0..7 counter for serialization
-  reg [11:0] base_addr;   // Tracks current image pixel offset (0, 8, 16...)
+  reg [7:0]       mem [0:FIFO_DEPTH-1];
+  reg [PTR_W-1:0] wptr;
+  reg [PTR_W-1:0] rptr;
+  reg [PTR_W:0]   cnt;
 
-  // Byte Mask Decoder (1 << ker_idx)
-  // idx 0 -> 0001, idx 1 -> 0010, etc.
-  wire [3:0] byte_mask = (4'b0001 << cfg_ker_idx);
+  wire fifo_full  = (cnt[PTR_W]); 
+  wire fifo_empty = (cnt == 0);
+  
+  assign busy = fifo_full;
 
+  wire push = sa_valid && !fifo_full;
+  reg  pop; 
+
+  // FIFO Write Side
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      state       <= ST_IDLE;
-      base_addr   <= 12'd0;
-      data_buf    <= 64'd0;
-      pixel_idx   <= 3'd0;
-      busy        <= 1'b0;
-      
-      // SRAM Outputs
-      sram_en     <= 1'b0;
-      sram_we     <= 1'b0;
-      sram_addr   <= 12'd0;
-      sram_wdata  <= 32'd0;
-      sram_wmask  <= 4'd0;
+      wptr <= 0;
+      cnt  <= 0;
     end else begin
-      // Default controls
-      sram_en <= 1'b0;
-      sram_we <= 1'b0;
-
-      // Reset base address at start of a kernel pass
       if (cfg_start_pass) begin
-        base_addr <= 12'd0;
-        state     <= ST_IDLE;
-        busy      <= 1'b0;
+        wptr <= 0;
+        cnt  <= 0;
       end else begin
+        if (push) begin
+          mem[wptr] <= sa_wdata;
+          wptr <= wptr + 1'b1;
+        end
         
-        case (state)
-          ST_IDLE: begin
-            pixel_idx <= 3'd0;
-            if (sa_valid) begin
-              data_buf <= sa_wdata;
-              busy     <= 1'b1;
-              state    <= ST_WRITE;
-            end else begin
-              busy     <= 1'b0;
-            end
-          end
+        if (push && !pop)      cnt <= cnt + 1'b1;
+        else if (!push && pop && !fifo_empty) cnt <= cnt - 1'b1;
+      end
+    end
+  end
 
-          ST_WRITE: begin
-            // Drive SRAM Write for current pixel
-            sram_en     <= 1'b1;
-            sram_we     <= 1'b1;
-            sram_wmask  <= byte_mask;
-            sram_addr   <= base_addr + {9'd0, pixel_idx};
-            
-            // Extract the specific byte for the current pixel_idx
-            // and replicate it 4 times (mask selects the correct lane)
-            // Pixel 0 is bits [7:0], Pixel 1 is [15:8]...
-            case (pixel_idx)
-              3'd0: sram_wdata <= {4{data_buf[ 7: 0]}};
-              3'd1: sram_wdata <= {4{data_buf[15: 8]}};
-              3'd2: sram_wdata <= {4{data_buf[23:16]}};
-              3'd3: sram_wdata <= {4{data_buf[31:24]}};
-              3'd4: sram_wdata <= {4{data_buf[39:32]}};
-              3'd5: sram_wdata <= {4{data_buf[47:40]}};
-              3'd6: sram_wdata <= {4{data_buf[55:48]}};
-              3'd7: sram_wdata <= {4{data_buf[63:56]}};
-            endcase
+  // FIFO Read Side
+  wire [7:0] fifo_rdata = mem[rptr];
 
-            // Loop logic
-            if (pixel_idx == 3'd7) begin
-              base_addr <= base_addr + 12'd8; // Advance base for next batch
-              state     <= ST_IDLE;
-              // busy remains high this cycle, goes low next cycle in IDLE
-            end else begin
-              pixel_idx <= pixel_idx + 3'd1;
-            end
-          end
-        endcase
+  always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) rptr <= 0;
+    else if (cfg_start_pass) rptr <= 0;
+    else if (pop && !fifo_empty) rptr <= rptr + 1'b1;
+  end
+
+  // ===========================================================================
+  // 2. Strided Address Logic
+  // Logic: 
+  //   On cfg_start_pass: byte_ptr = cfg_ker_idx
+  //   On Write:          byte_ptr = byte_ptr + 4
+  // ===========================================================================
+  
+  // We need extra bits for byte addressing. 
+  // ADDR_W is Word Address width. Byte Address width is ADDR_W + 2.
+  reg [ADDR_W-1:0] byte_ptr; 
+
+  always @(negedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      byte_ptr   <= 0;
+      pop        <= 0;
+      
+      sram_en    <= 0;
+      sram_we    <= 0;
+      sram_addr  <= 0;
+      sram_wdata <= 0;
+      sram_wmask <= 0;
+    end else begin
+      // Default
+      pop <= 0;
+      
+      if (cfg_start_pass) begin
+        // Reset Logic: Initialize to the Kernel Index
+        byte_ptr <= 0; 
+        sram_en  <= 0;
+        sram_we  <= 0;
+      end else begin
+        if (!fifo_empty) begin
+          // Processing
+          pop <= 1'b1;
+          
+          // SRAM Control
+          sram_en    <= 1'b1;
+          sram_we    <= 1'b1;
+          
+          // Address Derivation:
+          // Word Address = byte_ptr >> 2 (Upper bits)
+          sram_addr  <= byte_ptr;
+
+          // Mask Derivation:
+          // Byte Lane = byte_ptr % 4 (Lower 2 bits)
+          sram_wmask <= (4'b0001 << cfg_ker_idx);
+          
+          // Data: Broadcast 8-bit value to all lanes (mask selects valid one)
+          sram_wdata <= {4{fifo_rdata}};
+          
+          // Update Counter: Stride by 1
+          byte_ptr   <= byte_ptr + 3'd1;
+          
+        end else begin
+          // Idle
+          sram_en <= 1'b0;
+          sram_we <= 1'b0;
+        end
       end
     end
   end
