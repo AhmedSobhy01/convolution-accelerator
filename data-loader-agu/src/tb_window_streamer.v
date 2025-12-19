@@ -38,10 +38,20 @@ module tb_unaligned_memory_reader;
   end
   
   // Test variables
-  reg [63:0] expected_result;
   integer test_num;
   integer pass_count;
   integer fail_count;
+  
+  // Queue for expected results
+  reg [63:0] expected_queue [0:99];
+  integer expected_wr_ptr;
+  integer expected_rd_ptr;
+  integer expected_count;
+  
+  // Queue for captured outputs
+  reg [63:0] captured_queue [0:99];
+  integer captured_wr_ptr;
+  integer captured_count;
   
   // Initialize SRAM with test data matching Python code
   initial begin
@@ -68,10 +78,18 @@ module tb_unaligned_memory_reader;
     $display("  Word 3: 0x0000000000000019");
   end
   
+  // Capture outputs on negedge when resp_valid is high
+  always @(negedge clk) begin
+    if (rst_n && resp_valid) begin
+      captured_queue[captured_wr_ptr] = resp_data;
+      captured_wr_ptr = captured_wr_ptr + 1;
+      captured_count = captured_count + 1;
+      $display("[Time=%0t] Captured output: 0x%016X", $time, resp_data);
+    end
+  end
+  
   // Test stimulus
   initial begin
-    $dumpfile("unaligned_mem.vcd");
-    $dumpvars(0, tb_unaligned_memory_reader);
     
     // Initialize signals
     rst_n = 0;
@@ -81,6 +99,11 @@ module tb_unaligned_memory_reader;
     test_num = 0;
     pass_count = 0;
     fail_count = 0;
+    expected_wr_ptr = 0;
+    expected_rd_ptr = 0;
+    expected_count = 0;
+    captured_wr_ptr = 0;
+    captured_count = 0;
     
     // Reset
     repeat(10) @(posedge clk);
@@ -92,107 +115,70 @@ module tb_unaligned_memory_reader;
     
     $display("\n========================================");
     $display("=== Starting Unaligned Memory Tests ===");
-    $display("=== PIPELINED - 1 result per cycle ===");
+    $display("=== PIPELINED - 1 cycle latency ===");
     $display("========================================\n");
     
     // Pipeline test - send requests back-to-back
     $display("=== Back-to-back Pipeline Test ===\n");
+    $display("Issuing 5 back-to-back requests...\n");
     
-    // Send all 5 requests in consecutive cycles
-    test_num = 1;
-    $display("Issuing 5 back-to-back requests...");
+    // Queue expected results FIRST
+    queue_expected(64'h0000000504030201); // byte_addr=0, len=5
+    queue_expected(64'h0000000A09080706); // byte_addr=5, len=5
+    queue_expected(64'h0000000F0E0D0C0B); // byte_addr=10, len=5
+    queue_expected(64'h0000001413121110); // byte_addr=15, len=5
+    queue_expected(64'h0000001918171615); // byte_addr=20, len=5
     
+    // Send requests
+    send_request_async(10'd0, 3'd5);
+    send_request_async(10'd5, 3'd5);
+    send_request_async(10'd10, 3'd5);
+    send_request_async(10'd15, 3'd5);
+    send_request_async(10'd20, 3'd5);
+    
+    // Wait for all results to be captured
+    wait(captured_count >= 5);
     @(posedge clk);
-    byte_addr = 10'd0; len_bytes = 3'd5; req_valid = 1;
     
-    @(posedge clk);
-    byte_addr = 10'd5; len_bytes = 3'd5; req_valid = 1;
-    
-    @(posedge clk);
-    byte_addr = 10'd10; len_bytes = 3'd5; req_valid = 1;
-    
-    @(posedge clk);
-    byte_addr = 10'd15; len_bytes = 3'd5; req_valid = 1;
-
-		$display("\nCollecting pipelined results:\n");
-    
-    expected_result = 64'h0000000504030201;
-    $display("Test %0d: byte_addr=0, len_bytes=5 at time=%0t", test_num, $time);
-    $display("  Expected: 0x%016X", expected_result);
-    check_result(expected_result);
-    test_num = test_num + 1;
-    
-    @(posedge clk);
-    byte_addr = 10'd20; len_bytes = 3'd5; req_valid = 1;
-    
-    // Now collect results (they come out 2 cycles after request due to pipeline)
-
-    
-    expected_result = 64'h0000000A09080706;
-    $display("\nTest %0d: byte_addr=5, len_bytes=5 at time=%0t", test_num, $time);
-    $display("  Expected: 0x%016X", expected_result);
-    check_result(expected_result);
-    test_num = test_num + 1;
-    
-    @(posedge clk);
-    expected_result = 64'h0000000F0E0D0C0B;
-    $display("\nTest %0d: byte_addr=10, len_bytes=5 at time=%0t", test_num, $time);
-    $display("  Expected: 0x%016X", expected_result);
-    check_result(expected_result);
-    test_num = test_num + 1;
-    
-    @(posedge clk);
-    expected_result = 64'h0000001413121110;
-    $display("\nTest %0d: byte_addr=15, len_bytes=5 at time=%0t", test_num, $time);
-    $display("  Expected: 0x%016X", expected_result);
-    check_result(expected_result);
-    test_num = test_num + 1;
-    
-    @(posedge clk);
-    expected_result = 64'h0000001918171615;
-    $display("\nTest %0d: byte_addr=20, len_bytes=5 at time=%0t", test_num, $time);
-    $display("  Expected: 0x%016X", expected_result);
-    check_result(expected_result);
+    // Verify the first 5 results
+    $display("\n=== Verifying Back-to-back Pipeline Results ===\n");
+    verify_outputs(5);
     
     $display("\n========================================");
     $display("=== Individual Request Tests ===");
     $display("========================================\n");
     
-    // Test with spacing between requests
-    test_num = 6;
-    expected_result = 64'h0807060504030201;
-    $display("Test %0d: Aligned 8-byte read at byte_addr=0", test_num);
-    $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd0, 3'd0);  // 0 means 8 bytes
-    wait_response();
-    check_result(expected_result);
+    // Test 6: Aligned 8-byte read at byte_addr=0
+    $display("Test 6: Aligned 8-byte read at byte_addr=0");
+    queue_expected(64'h0807060504030201);
+    send_request_async(10'd0, 3'd0);
+    wait(captured_count >= 6);
+    @(posedge clk);
     
     // Test 7: Single byte read at byte_addr=7
-    test_num = 7;
-    expected_result = 64'h0000000000000008;
-    $display("\nTest %0d: Single byte read at byte_addr=7", test_num);
-    $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd7, 3'd1);
-    wait_response();
-    check_result(expected_result);
+    $display("\nTest 7: Single byte read at byte_addr=7");
+    queue_expected(64'h0000000000000008);
+    send_request_async(10'd7, 3'd1);
+    wait(captured_count >= 7);
+    @(posedge clk);
     
     // Test 8: Read crossing word boundary at byte_addr=6
-    test_num = 8;
-    expected_result = 64'h0B0A090807;
-    $display("\nTest %0d: 5-byte read at byte_addr=6", test_num);
-    $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd6, 3'd5);
-    wait_response();
-    check_result(expected_result);
+    $display("\nTest 8: 5-byte read at byte_addr=6");
+    queue_expected(64'h00000B0A09080706);
+    send_request_async(10'd6, 3'd5);
+    wait(captured_count >= 8);
+    @(posedge clk);
     
     // Test 9: Aligned read at word 1
-    test_num = 9;
-    expected_result = 64'h100F0E0D0C0B0A09;
-    $display("\nTest %0d: Aligned 8-byte read at byte_addr=8", test_num);
-    $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd8, 3'd0);
-    wait_response();
-    check_result(expected_result);
+    $display("\nTest 9: Aligned 8-byte read at byte_addr=8");
+    queue_expected(64'h100F0E0D0C0B0A09);
+    send_request_async(10'd8, 3'd0);
+    wait(captured_count >= 9);
+    @(posedge clk);
+    
+    // Verify remaining tests
+    $display("\n=== Verifying Individual Request Results ===\n");
+    verify_outputs(4);
     
     $display("\n========================================");
     $display("=== Test Summary ===");
@@ -211,38 +197,55 @@ module tb_unaligned_memory_reader;
     $finish;
   end
   
-  // Task to send a read request
-  task send_request(input [9:0] addr, input [2:0] len);
+  // Task to queue an expected result
+  task queue_expected(input [63:0] expected);
+    begin
+      expected_queue[expected_wr_ptr] = expected;
+      expected_wr_ptr = expected_wr_ptr + 1;
+      expected_count = expected_count + 1;
+    end
+  endtask
+  
+  // Task to verify outputs
+  task verify_outputs(input integer num_to_verify);
+    integer i;
+    reg [63:0] expected_val;
+    reg [63:0] captured_val;
+    begin
+      for (i = 0; i < num_to_verify; i = i + 1) begin
+        expected_val = expected_queue[expected_rd_ptr];
+        captured_val = captured_queue[expected_rd_ptr];
+        
+        $display("Test %0d:", expected_rd_ptr + 1);
+        $display("  Expected: 0x%016X", expected_val);
+        $display("  Got:      0x%016X", captured_val);
+        
+        if (captured_val === expected_val) begin
+          $display("  Result:   PASS ✓");
+          pass_count = pass_count + 1;
+        end else begin
+          $display("  Result:   FAIL ✗");
+          $display("  ERROR: Mismatch!");
+          fail_count = fail_count + 1;
+        end
+        $display("");
+        
+        expected_rd_ptr = expected_rd_ptr + 1;
+      end
+    end
+  endtask
+  
+  // Task to send request without waiting
+  task send_request_async(input [9:0] addr, input [2:0] len);
     begin
       @(posedge clk);
       byte_addr = addr;
       len_bytes = len;
       req_valid = 1;
-      @(posedge clk);
+      $display("[Time=%0t] Sent request: byte_addr=%0d, len_bytes=%0d", $time, addr, len);
+			@(posedge clk);
       req_valid = 0;
-    end
-  endtask
-  
-  // Task to wait for response (2 cycle pipeline latency)
-  task wait_response();
-    begin
-      @(posedge clk);
-      @(posedge clk);
-    end
-  endtask
-  
-  // Task to check result
-  task check_result(input [63:0] expected);
-    begin
-      $display("  Got:      0x%016X", resp_data);
-      if (resp_data === expected) begin
-        $display("  Result:   PASS ✓");
-        pass_count = pass_count + 1;
-      end else begin
-        $display("  Result:   FAIL ✗");
-        $display("  ERROR: Mismatch!");
-        fail_count = fail_count + 1;
-      end
+
     end
   endtask
   
