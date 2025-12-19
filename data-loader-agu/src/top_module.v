@@ -218,7 +218,7 @@ module conv_accelerator_top #(
     .cfg_num_pixels(total_pixels[SRAM1_ADDR_W-1:0]),
     .cfg_split_mode(cfg_split_mode),
     .done(drain_done),
-    .sram_en(z),
+    .sram_en(sram1_p1_en),
     .sram_addr(sram1_p1_addr),
     .sram_rdata(sram1_p1_rdata),
     .tx_valid(tx_valid),

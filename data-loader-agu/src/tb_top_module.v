@@ -178,7 +178,7 @@ module tb_conv_accelerator;
     cfg_K = 5'd4;
     cfg_start_pass = 0;
     cfg_ker_idx = 0;
-    cfg_split_mode = 0; // Single mode for this test
+    cfg_split_mode = 1; // Single mode for this test
     tx_ready = 1;
     
     sa_out_valid = 0;
@@ -247,7 +247,7 @@ module tb_conv_accelerator;
     @(posedge clk);
 
     // 2. Stream 64 pixels (N*N) into the WB module
-    for (i = 0; i < 64; i = i + 1) begin
+    for (i = 1; i < 65; i = i + 1) begin
       // Wait if busy
       while (sa_wb_busy) @(posedge clk);
 
@@ -261,6 +261,77 @@ module tb_conv_accelerator;
     
     // Allow time for the Writeback FIFO to empty into SRAM1
     repeat(20) @(posedge clk);
+   
+    // 1. Reset WB Pointers
+    cfg_ker_idx = 1;
+    cfg_start_pass = 1'b1;
+    @(posedge clk);
+    cfg_start_pass = 1'b0;
+    @(posedge clk);
+
+    // 2. Stream 64 pixels (N*N) into the WB module
+    for (i = 1; i < 65; i = i + 1) begin
+      // Wait if busy
+      while (sa_wb_busy) @(posedge clk);
+
+      sa_out_valid = 1'b1;
+      sa_out_data  = i[7:0]; // Data = Index (0x00, 0x01, ... 0x3F)
+      @(posedge clk);
+    end
+    
+    sa_out_valid = 1'b0;
+    sa_out_data  = 8'd0;
+    
+    // Allow time for the Writeback FIFO to empty into SRAM1
+    repeat(20) @(posedge clk);
+
+      // 1. Reset WB Pointers
+    cfg_ker_idx = 2;
+    cfg_start_pass = 1'b1;
+    @(posedge clk);
+    cfg_start_pass = 1'b0;
+    @(posedge clk);
+
+    // 2. Stream 64 pixels (N*N) into the WB module
+    for (i = 1; i < 65; i = i + 1) begin
+      // Wait if busy
+      while (sa_wb_busy) @(posedge clk);
+
+      sa_out_valid = 1'b1;
+      sa_out_data  = i[7:0]; // Data = Index (0x00, 0x01, ... 0x3F)
+      @(posedge clk);
+    end
+    
+    sa_out_valid = 1'b0;
+    sa_out_data  = 8'd0;
+    
+    // Allow time for the Writeback FIFO to empty into SRAM1
+    repeat(20) @(posedge clk);
+
+
+      // 1. Reset WB Pointers
+    cfg_ker_idx = 3;
+    cfg_start_pass = 1'b1;
+    @(posedge clk);
+    cfg_start_pass = 1'b0;
+    @(posedge clk);
+
+    // 2. Stream 64 pixels (N*N) into the WB module
+    for (i = 1; i < 65; i = i + 1) begin
+      // Wait if busy
+      while (sa_wb_busy) @(posedge clk);
+
+      sa_out_valid = 1'b1;
+      sa_out_data  = i[7:0]; // Data = Index (0x00, 0x01, ... 0x3F)
+      @(posedge clk);
+    end
+    
+    sa_out_valid = 1'b0;
+    sa_out_data  = 8'd0;
+    
+    // Allow time for the Writeback FIFO to empty into SRAM1
+    repeat(20) @(posedge clk);
+
     $display("[%0t] Writeback filling complete.", $time);
 
 
@@ -270,8 +341,9 @@ module tb_conv_accelerator;
     $display("\n[%0t] Phase 4: Draining Results & Verifying", $time);
     
     drain_word_cnt = 0;
+    @(negedge clk);
     start_drain = 1'b1;
-    @(posedge clk);
+    @(negedge clk);
     start_drain = 1'b0;
 
     // Monitor Loop
@@ -292,6 +364,7 @@ module tb_conv_accelerator;
         
         $write("[%0t] DRAIN OUTPUT: %h ... ", $time, tx_data);
         
+        repeat(40) @(posedge clk);
         if (tx_data === expected_drain_data) begin
              $display("PASS (Matches Expected %h)", expected_drain_data);
         end else begin
@@ -314,7 +387,6 @@ module tb_conv_accelerator;
         $display("\nERROR: Incorrect number of drain words received.");
     end
     
-    repeat(10) @(posedge clk);
     $finish;
   end
 
