@@ -29,6 +29,7 @@ add wave sim:/tb_control_unit/done
 
 add wave -divider "Data Loader Interface"
 add wave sim:/tb_control_unit/dl_busy
+add wave sim:/tb_control_unit/busy_clk
 add wave sim:/tb_control_unit/rx_ready
 add wave sim:/tb_control_unit/rx_valid
 add wave sim:/tb_control_unit/tx_ready
@@ -51,10 +52,14 @@ add wave sim:/tb_control_unit/start_sending_output_to_dram
 add wave -divider "Internal State"
 add wave sim:/tb_control_unit/dut/state
 add wave -radix unsigned sim:/tb_control_unit/dut/total_kernel_parts
-add wave -radix unsigned sim:/tb_control_unit/dut/sa_rows_counter
+add wave -radix unsigned sim:/tb_control_unit/dut/sa_input_rows_counter
+add wave -radix unsigned sim:/tb_control_unit/dut/sa_output_rows_counter
 add wave -radix unsigned sim:/tb_control_unit/dut/sa_cols_counter
 add wave -radix unsigned sim:/tb_control_unit/dut/max_columns
+add wave -radix unsigned sim:/tb_control_unit/dut/current_kernel_width
+add wave -radix unsigned sim:/tb_control_unit/dut/current_kernel_height
 add wave -radix unsigned sim:/tb_control_unit/dut/right_column_offset
+add wave -radix unsigned sim:/tb_control_unit/dut/result_size
 
 # Configure wave window
 configure wave -namecolwidth 250

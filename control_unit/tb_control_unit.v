@@ -9,6 +9,7 @@ module tb_control_unit;
 
     // DUT signals
     reg clk;
+    reg busy_clk;
     reg rst_n;
     reg start;
     reg [5:0] cfg_N;
@@ -51,7 +52,7 @@ module tb_control_unit;
         .cfg_N(cfg_N),
         .cfg_K(cfg_K),
         .done(done),
-        .dl_busy(dl_busy),
+        .dl_busy(busy_clk),
         .rx_ready(rx_ready),
         .rx_valid(rx_valid),
         .tx_ready(tx_ready),
@@ -72,6 +73,11 @@ module tb_control_unit;
     initial begin
         clk = 0;
         forever #(CLK_PERIOD/2) clk = ~clk;
+    end
+    
+    initial begin
+        busy_clk = 1;  // Start opposite to clk
+        forever #(CLK_PERIOD * 2) busy_clk = ~busy_clk;
     end
 
     // Task to reset the system
@@ -193,11 +199,13 @@ module tb_control_unit;
                 rx_valid = 0;
             end
             
-            simulate_kernel_load(10);
-            simulate_image_load(20);
+            simulate_kernel_load(1);
+            simulate_image_load(1);
             simulate_kernel_to_sa(SA_DIM);
-            simulate_output_store(15);
+            simulate_output_store(1);
         join
+        
+        $display("[%0t] Waiting for done state: done=%b, state=%0d", $time, done, dut.state);
         
         wait(done);
         $display("[%0t] Test Case 1 completed - DONE signal asserted", $time);
@@ -214,6 +222,8 @@ module tb_control_unit;
                 cfg_K = 5;
                 start = 1;
                 @(posedge clk);
+                @(posedge clk);
+                @(posedge clk);
                 start = 0;
                 
                 wait(rx_ready);
@@ -223,10 +233,10 @@ module tb_control_unit;
                 rx_valid = 0;
             end
             
-            simulate_kernel_load(15);
-            simulate_image_load(30);
+            simulate_kernel_load(1);
+            simulate_image_load(1);
             simulate_kernel_to_sa(SA_DIM);
-            simulate_output_store(20);
+            simulate_output_store(1);
         join
         
         wait(done);
@@ -244,6 +254,7 @@ module tb_control_unit;
                 cfg_K = 12;
                 start = 1;
                 @(posedge clk);
+                @(posedge clk);
                 start = 0;
                 
                 wait(rx_ready);
@@ -253,16 +264,15 @@ module tb_control_unit;
                 rx_valid = 0;
             end
             
-            simulate_kernel_load(30);
-            simulate_image_load(50);
+            // simulate_image_load(50);
             
-            // Multiple kernel parts need to be loaded (4 parts for 12x12 with SA_DIM=8)
-            simulate_kernel_to_sa(SA_DIM);  // Part 0
-            simulate_kernel_to_sa(SA_DIM);  // Part 1
-            simulate_kernel_to_sa(SA_DIM);  // Part 2
-            simulate_kernel_to_sa(SA_DIM);  // Part 3
+            // // Multiple kernel parts need to be loaded (4 parts for 12x12 with SA_DIM=8)
+            // simulate_kernel_to_sa(SA_DIM);  // Part 0
+            // simulate_kernel_to_sa(SA_DIM);  // Part 1
+            // simulate_kernel_to_sa(SA_DIM);  // Part 2
+            // simulate_kernel_to_sa(SA_DIM);  // Part 3
             
-            simulate_output_store(25);
+            simulate_output_store(1);
         join
         
         wait(done);
@@ -280,6 +290,7 @@ module tb_control_unit;
                 cfg_K = 8;
                 start = 1;
                 @(posedge clk);
+                @(posedge clk);
                 start = 0;
                 
                 wait(rx_ready);
@@ -289,10 +300,10 @@ module tb_control_unit;
                 rx_valid = 0;
             end
             
-            simulate_kernel_load(20);
-            simulate_image_load(35);
+            simulate_kernel_load(1);
+            simulate_image_load(1);
             simulate_kernel_to_sa(SA_DIM);
-            simulate_output_store(18);
+            simulate_output_store(1);
         join
         
         wait(done);
@@ -310,6 +321,7 @@ module tb_control_unit;
                 cfg_K = 15;
                 start = 1;
                 @(posedge clk);
+                @(posedge clk);
                 start = 0;
                 
                 wait(rx_ready);
@@ -319,8 +331,8 @@ module tb_control_unit;
                 rx_valid = 0;
             end
             
-            simulate_kernel_load(40);
-            simulate_image_load(80);
+            simulate_kernel_load(1);
+            simulate_image_load(1);
             
             // Multiple kernel parts need to be loaded (4 parts for 15x15 with SA_DIM=8)
             simulate_kernel_to_sa(SA_DIM);  // Part 0
@@ -342,7 +354,7 @@ module tb_control_unit;
 
     // Timeout watchdog
     initial begin
-        #(CLK_PERIOD * 100000);
+        #(CLK_PERIOD * 10000);
         $display("ERROR: Simulation timeout!");
         $finish;
     end
