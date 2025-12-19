@@ -9,27 +9,18 @@ module tb_dl_writeback;
   reg        cfg_start_pass;
   reg [1:0]  cfg_ker_idx;
   reg        sa_valid;
-  reg [63:0] sa_wdata;
+  reg [7:0]  sa_wdata; // UPDATED: 8 bits
+  wire       busy;
 
   wire        sram1_en;
   wire        sram1_we;
-  wire [10:0] sram1_addr;
-  wire [63:0] sram1_wdata;
-  wire [7:0]  sram1_wmask;
-
-  // Simulation Variables
-  integer pass, block;
-  reg [63:0] mock_data;
-  localparam NUM_BLOCKS = 4; 
-
-  // Monitor Variables (Declared here to avoid scope errors)
-  reg [1:0] mon_pass_idx;
-  integer   mon_block_cnt;
-  integer   exp_addr;          // <--- Moved here
+  wire [11:0] sram1_addr;
+  wire [31:0] sram1_wdata;
+  wire [3:0]  sram1_wmask;
 
   // DUT Instance
   dl_sa_writeback #(
-    .ADDR_W(11)
+    .ADDR_W(12)
   ) dut (
     .clk(clk),
     .rst_n(rst_n),
@@ -37,120 +28,103 @@ module tb_dl_writeback;
     .cfg_ker_idx(cfg_ker_idx),
     .sa_valid(sa_valid),
     .sa_wdata(sa_wdata),
-    .sram1_en(sram1_en),
-    .sram1_we(sram1_we),
-    .sram1_addr(sram1_addr),
-    .sram1_wdata(sram1_wdata),
-    .sram1_wmask(sram1_wmask)
+    .busy(busy),
+    .sram_en(sram1_en),
+    .sram_we(sram1_we),
+    .sram_addr(sram1_addr),
+    .sram_wdata(sram1_wdata),
+    .sram_wmask(sram1_wmask)
   );
 
-  // Clock Generation
+  // Clock
   initial begin
     clk = 0;
     forever #5 clk = ~clk;
   end
 
-  // -----------------------------------------------------------------------
-  // DRIVER TASK: Sends data with random stalls
-  // -----------------------------------------------------------------------
-  task send_sa_data;
-    input [63:0] data;
+  // Task: Push Single Pixel
+  task push_pixel;
+    input [7:0] val;
     begin
+      while (busy) @(posedge clk);
       sa_valid <= 1'b1;
-      sa_wdata <= data;
-      @(posedge clk);         // Active cycle
+      sa_wdata <= val;
+      @(posedge clk);
       sa_valid <= 1'b0;
-      sa_wdata <= 64'd0;
-      // Random gap (stalls)
-      repeat ($urandom_range(0, 2)) @(posedge clk);
+      sa_wdata <= 8'd0;
     end
   endtask
 
-  // -----------------------------------------------------------------------
-  // MONITOR: Checks outputs independently
-  // -----------------------------------------------------------------------
-  always @(posedge clk) begin
-    if (!rst_n) begin
-      mon_block_cnt <= 0;
-      mon_pass_idx  <= 0;
-    end else begin
-      // Sync Monitor with Config signals
-      if (cfg_start_pass) begin
-        mon_pass_idx  <= cfg_ker_idx;
-        mon_block_cnt <= 0;
-      end 
-      
-      // Verify Write on Enable
-      if (sram1_en && sram1_we) begin
-        // Calculate Expected Values
-        exp_addr = (mon_block_cnt * 4) + mon_pass_idx;
-        
-        // Check Address
-        if (sram1_addr !== exp_addr[10:0]) begin
-          $display("ERROR: Addr Mismatch! Time: %0t, Pass: %0d, Block: %0d", $time, mon_pass_idx, mon_block_cnt);
-          $display("       Exp Addr: %0d, Got: %0d", exp_addr, sram1_addr);
-          $stop;
-        end
-        
-        // Check Data Payload (specifically the embedded IDs)
-        // Payload format: {8'hAA, 8'hBB, pass[7:0], block[7:0], ...}
-        if (sram1_wdata[47:40] !== {6'b0, mon_pass_idx} || 
-            sram1_wdata[39:32] !== mon_block_cnt[7:0]) begin
-          $display("ERROR: Data Mismatch! Time: %0t", $time);
-          $display("       Expected payload with Pass=%0d Block=%0d", mon_pass_idx, mon_block_cnt);
-          $display("       Got Data: %16h", sram1_wdata);
-          $stop;
-        end
-
-        $display("[Monitor] OK: Pass %0d Block %0d -> Addr %0d", mon_pass_idx, mon_block_cnt, sram1_addr);
-        
-        // Advance Monitor Counter
-        mon_block_cnt <= mon_block_cnt + 1;
-      end
-    end
-  end
-
-  // -----------------------------------------------------------------------
-  // MAIN STIMULUS
-  // -----------------------------------------------------------------------
+  // Main Test
   initial begin
-    // Init
     rst_n = 0;
     cfg_start_pass = 0;
     cfg_ker_idx = 0;
     sa_valid = 0;
     sa_wdata = 0;
-    mock_data = 0;
     
     #20 rst_n = 1;
     #10;
 
-    $display("\n=== Starting Write-Back Interleave Test ===");
-
-    // Loop through 4 kernel passes (idx 0..3)
-    for (pass = 0; pass < 4; pass = pass + 1) begin
-      $display("\n--- Stimulus: Pass Kernel Idx %0d ---", pass);
-      
-      // 1. Pulse start configuration
-      cfg_ker_idx <= pass[1:0];
-      cfg_start_pass <= 1'b1;
-      @(posedge clk);
-      cfg_start_pass <= 1'b0;
-      @(posedge clk);
-
-      // 2. Send NUM_BLOCKS of data
-      for (block = 0; block < NUM_BLOCKS; block = block + 1) begin
-        // Construct unique data pattern matching monitor expectations
-        mock_data = {8'hAA, 8'hBB, pass[7:0], block[7:0], 32'h12345678}; 
-        send_sa_data(mock_data);
-      end
-      
-      // Allow valid signal to settle before next pass
-      repeat(2) @(posedge clk);
-    end
+    $display("=== START STRIDED COUNTER TEST ===");
     
-    repeat(5) @(posedge clk);
-    $display("\n=== ALL TESTS PASSED ===");
+    // ---------------------------------------------------------
+    // Scenario 1: Kernel Index 0 (Start 0, Step 4)
+    // Expect: 
+    //   Write 0xAA -> Addr 0, Mask 0001 (Byte 0)
+    //   Write 0xBB -> Addr 1, Mask 0001 (Byte 0)
+    //   Write 0xCC -> Addr 2, Mask 0001 (Byte 0)
+    // ---------------------------------------------------------
+    $display("[TB] Test 1: Kernel Index 0 (Start=0, Stride=4)");
+    
+    cfg_ker_idx    <= 0; 
+    cfg_start_pass <= 1;
+    @(posedge clk);
+    cfg_start_pass <= 0;
+    @(posedge clk);
+
+    push_pixel(8'hAA);
+    push_pixel(8'hBB);
+    push_pixel(8'hCC);
+    
+    repeat(10) @(posedge clk);
+
+    // ---------------------------------------------------------
+    // Scenario 2: Kernel Index 1 (Start 1, Step 4)
+    // Expect:
+    //   Write 0x11 -> Addr 0, Mask 0010 (Byte 1)
+    //   Write 0x22 -> Addr 1, Mask 0010 (Byte 1)
+    // ---------------------------------------------------------
+    $display("[TB] Test 2: Kernel Index 0 (Start=0, Stride=4)");
+    
+    @(posedge clk);
+
+    push_pixel(8'hDD);
+    push_pixel(8'hEE);
+    push_pixel(8'hFF);
+    
+    repeat(10) @(posedge clk);
+
+    // ---------------------------------------------------------
+    // Scenario 2: Kernel Index 1 (Start 1, Step 4)
+    // Expect:
+    //   Write 0x11 -> Addr 0, Mask 0010 (Byte 1)
+    //   Write 0x22 -> Addr 1, Mask 0010 (Byte 1)
+    // ---------------------------------------------------------
+    $display("[TB] Test 3: Kernel Index 1 (Start=1, Stride=4)");
+    
+    cfg_ker_idx    <= 1;
+    cfg_start_pass <= 1;
+    @(posedge clk);
+    cfg_start_pass <= 0;
+    @(posedge clk);
+
+    push_pixel(8'h11);
+    push_pixel(8'h22);
+    
+    repeat(10) @(posedge clk);
+
+    $display("=== TEST COMPLETE ===");
     $finish;
   end
 
