@@ -1,14 +1,8 @@
 `timescale 1ns/1ps
-`define USE_POWER_PINS
 
 module unaligned_memory_reader (
   input  wire         clk,
   input  wire         rst_n,
-  
-  `ifdef USE_POWER_PINS
-    inout vccd1,
-    inout vssd1,
-  `endif
   
   // Request interface
   input  wire         req_valid,
@@ -18,7 +12,15 @@ module unaligned_memory_reader (
   
   // Response interface
   output reg          resp_valid,
-  output reg [63:0]   resp_data
+  output reg [63:0]   resp_data,
+
+  // Output to the sram:
+  output wire         sram_p0_en,
+  output wire [9:0]   sram_p0_addr,
+  input  wire [63:0]  sram_p0_rdata,
+  output wire         sram_p1_en,
+  output wire [9:0]   sram_p1_addr,
+  input  wire [63:0]  sram_p1_rdata
 );
 
   // SRAM ports
@@ -31,28 +33,35 @@ module unaligned_memory_reader (
   
   // Pipeline can always accept new requests
   assign req_ready = 1'b1;
+
+  assign sram_p0_en   = req_valid;
+  assign sram_p0_addr = word_addr;
+  assign sram_p1_en   = req_valid;
+  assign sram_p1_addr = word_addr + 10'd1;
+  assign p0_rdata     = sram_p0_rdata;
+  assign p1_rdata     = sram_p1_rdata;
   
-  // SRAM instance
-  sram0_1rw1r_64x1024_wrapper u_sram (
-    .clk(clk),
-    `ifdef USE_POWER_PINS
-      .vccd1(vccd1),
-      .vssd1(vssd1),
-    `endif
+  // // SRAM instance
+  // sram0_1rw1r_64x1024_wrapper u_sram (
+  //   .clk(clk),
+  //   `ifdef USE_POWER_PINS
+  //     .vccd1(vccd1),
+  //     .vssd1(vssd1),
+  //   `endif
     
-    // Port 0 - Read first word
-    .p0_en(req_valid),
-    .p0_we(1'b0),
-    .p0_addr(word_addr),
-    .p0_wdata(64'd0),
-    .p0_wmask(8'd0),
-    .p0_rdata(p0_rdata),
+  //   // Port 0 - Read first word
+  //   .p0_en(req_valid),
+  //   .p0_we(1'b0),
+  //   .p0_addr(word_addr),
+  //   .p0_wdata(64'd0),
+  //   .p0_wmask(8'd0),
+  //   .p0_rdata(p0_rdata),
     
-    // Port 1 - Read second word
-    .p1_en(req_valid),
-    .p1_addr(word_addr + 10'd1),
-    .p1_rdata(p1_rdata)
-  );
+  //   // Port 1 - Read second word
+  //   .p1_en(req_valid),
+  //   .p1_addr(word_addr + 10'd1),
+  //   .p1_rdata(p1_rdata)
+  // );
   
   // Register inputs for alignment with SRAM output
   reg         req_valid_d;
