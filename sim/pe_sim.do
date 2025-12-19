@@ -21,8 +21,11 @@ add wave -position insertpoint -radix unsigned sim:/pe_tb/out_down
 add wave -position insertpoint -radix unsigned sim:/pe_tb/out_right
 
 add wave -divider "Internal Registers"
+add wave -position insertpoint -radix unsigned sim:/pe_tb/uut/partial_sum
+add wave -position insertpoint -radix unsigned sim:/pe_tb/uut/kernel_reg
 add wave -position insertpoint -radix unsigned sim:/pe_tb/uut/top_reg
 add wave -position insertpoint -radix unsigned sim:/pe_tb/uut/left_reg
+add wave -position insertpoint sim:/pe_tb/uut/kernel_loaded
 
 configure wave -namecolwidth 200
 configure wave -valuecolwidth 100

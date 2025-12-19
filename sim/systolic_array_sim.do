@@ -1,5 +1,6 @@
 vlib work
 
+vlog -work work rtl/shift_register.v
 vlog -work work rtl/pe.v
 vlog -work work rtl/systolic_array.v
 vlog -work work tb/systolic_array_tb.v
@@ -21,19 +22,19 @@ add wave -divider "Output"
 add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/out_data
 
 add wave -divider "PE Array Row 0"
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[0]/pe_00/pe_inst/out_partial
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[1]/pe_top_row/pe_inst/out_partial
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[2]/pe_top_row/pe_inst/out_partial
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[0]/pe_00/pe_inst/partial_sum
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[1]/pe_top_row/pe_inst/partial_sum
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[2]/pe_top_row/pe_inst/partial_sum
 
 add wave -divider "PE Array Row 1"
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[1]/col[0]/pe_left_col/pe_inst/out_partial
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[1]/col[1]/pe_inner/pe_inst/out_partial
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[1]/col[2]/pe_inner/pe_inst/out_partial
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[1]/col[0]/pe_left_col/pe_inst/partial_sum
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[1]/col[1]/pe_inner/pe_inst/partial_sum
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[1]/col[2]/pe_right_col/pe_inst/partial_sum
 
 add wave -divider "PE Array Row 2"
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[2]/col[0]/pe_left_col/pe_inst/out_partial
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[2]/col[1]/pe_inner/pe_inst/out_partial
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[2]/col[2]/pe_inner/pe_inst/out_partial
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[2]/col[0]/pe_left_col/pe_inst/partial_sum
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[2]/col[1]/pe_inner/pe_inst/partial_sum
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[2]/col[2]/pe_right_col/pe_inst/partial_sum
 
 add wave -divider "Sum Partials"
 add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/sum_partials
