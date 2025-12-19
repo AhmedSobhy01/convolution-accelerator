@@ -50,6 +50,7 @@ module kernel_and_window_streamer #(
 
   wire [15:0] ker_col_addr = KER_BASE_BYTE + col_cnt * col_bytes;
   wire [15:0] img_row_addr = IMG_BASE_BYTE + window_col + row_cnt * row_bytes;
+	
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin

@@ -200,7 +200,7 @@ module tb_conv_accelerator;
     // Phase 1: Load data
     // ----------------------------------------
     $display("\n[%0t] Phase 1: Loading data", $time);
-    load_data_file("inputdata.hex");
+    load_data_file("inputdata.data");
     
     @(posedge clk);
     start_load = 1'b1;
@@ -232,7 +232,7 @@ module tb_conv_accelerator;
     $display("\n[%0t] Phase 3: Streaming window", $time);
     repeat(5) @(posedge clk);
     
-    window_col = 16'd0;
+    window_col = 16'd1;
     start_window = 1'b1;
     @(posedge clk);
     start_window = 1'b0;
