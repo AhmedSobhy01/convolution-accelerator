@@ -1,6 +1,5 @@
 vlib work
 
-vlog -work work rtl/shift_register.v
 vlog -work work rtl/pe.v
 vlog -work work rtl/systolic_array.v
 vlog -work work tb/systolic_array_tb.v
