@@ -23,7 +23,7 @@ add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/out_data
 add wave -divider "PE Array Row 0"
 add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[0]/pe_00/pe_inst/partial_sum
 add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[1]/pe_top_row/pe_inst/partial_sum
-add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[2]/pe_top_row/pe_inst/partial_sum
+add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[0]/col[2]/pe_top_right/pe_inst/partial_sum
 
 add wave -divider "PE Array Row 1"
 add wave -position insertpoint -radix unsigned sim:/systolic_array_tb/dut/row[1]/col[0]/pe_left_col/pe_inst/partial_sum
