@@ -35,9 +35,6 @@ module tb_drain;
   reg [31:0]  tb_wdata;
   reg [3:0]   tb_wmask;
 
-  // Power Pins
-  wire vccd1 = 1'b1;
-  wire vssd1 = 1'b0;
 
   // ===========================================================================
   // 2. MODULE INSTANTIATION
