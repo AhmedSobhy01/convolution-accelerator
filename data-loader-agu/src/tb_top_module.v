@@ -212,8 +212,8 @@ module tb_conv_accelerator;
     start_window = 0;
     start_drain = 0;
     window_col = 16'd0;
-    cfg_N = 7'd8;
-    cfg_K = 5'd13;
+    cfg_N = 7'd16;
+    cfg_K = 5'd12;
     cfg_start_pass = 0;
     cfg_ker_idx = 0;
     cfg_split_mode = 1; // Single mode for this test
@@ -252,37 +252,25 @@ module tb_conv_accelerator;
     repeat(5) @(posedge clk);
     
     start_kernel_load = 1'b1;
-    kernel_idx = 2'd0;
+    kernel_idx = 2'd2;
     @(posedge clk);
     start_kernel_load = 1'b0;
     
     wait(kernel_done);
     @(posedge clk);
-    $display("[%0t] Kernel load complete (Quadrant 0)", $time);
-
-    start_kernel_load = 1'b1;
-    kernel_idx = 2'd1;
-    @(posedge clk);
-    start_kernel_load = 1'b0;
-    wait(kernel_done);
-    @(posedge clk);
-    $display("[%0t] Kernel load complete (Quadrant 1)", $time);
-
-    start_kernel_load = 1'b1;
-    kernel_idx = 2'd2;
-    @(posedge clk);
-    start_kernel_load = 1'b0;
-    wait(kernel_done);
-    @(posedge clk);
     $display("[%0t] Kernel load complete (Quadrant 2)", $time);
+    
+    start_window = 1'b1;
+    kernel_idx = 2'd2;
+    window_col = 16'd0;
+    @(posedge clk);
+    start_window = 1'b0;
 
-    start_kernel_load = 1'b1;
-    kernel_idx = 2'd3;
+    wait(window_done);
     @(posedge clk);
-    start_kernel_load = 1'b0;
-    wait(kernel_done);
-    @(posedge clk);
-    $display("[%0t] Kernel load complete (Quadrant 3)", $time);
+
+    $display("[%0t] Initial window stream complete", $time);
+
     
     // ----------------------------------------
     // Phase 3A: Window Streaming (Read Path Test)
