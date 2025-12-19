@@ -6,7 +6,9 @@
 # ------------------------------------------------------------------------------
 vlib work
 vmap work work
-vlog src/*.v
+vlog data-loader-agu/src/*.v
+vlog -work work tb/tb_conv_accelerator.v
+vlog -work work conv_accelerator_top.v
 
 # 2. Start Simulation
 # ------------------------------------------------------------------------------
@@ -17,8 +19,9 @@ vsim -voptargs=+acc work.tb_conv_accelerator
 # vlog -work work designs/SRAM_64_1024_2_grid/src/memory_generator_sky130_64_1024_2.v
 
 # 3) Compile your wrappers
-vlog -work work src/sram0_wrapper.v
-vlog -work work src/sram1_wrapper.v
+vlog -work work data-loader-agu/src/sram0_wrapper.v
+vlog -work work data-loader-agu/src/sram1_wrapper.v
+
 
 # ------------------------------------------------------------------------------
 # GROUP: TOP LEVEL CONTROLS & CONFIG
