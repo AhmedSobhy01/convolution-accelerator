@@ -67,7 +67,7 @@ module kernel_and_window_streamer #(
   wire img_is_top = (kernel_idx == 2'd0) || (kernel_idx == 2'd1);
 
   wire [15:0] img_row_start = img_is_top ? 16'd0 : k_lo;
-  wire [15:0] img_rows_total = N16 - k_lo;
+  wire [15:0] img_rows_total = N16 - ((k_big) ?  k_lo : 16'd0);
 
   localparam IDLE        = 2'd0;
   localparam LOAD_KERNEL = 2'd1;
