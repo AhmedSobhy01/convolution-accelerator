@@ -23,6 +23,7 @@ module conv_accelerator_top #(
   output wire         load_done,      // DMA load complete
   
   input  wire         start_kernel_load,   // start streaming kernel to SA
+  input  wire [1:0]   kernel_idx,         // kernel quadrant index
   output wire         kernel_done,         // kernel load complete
   
   input  wire         start_window,   // start streaming image window
@@ -167,6 +168,7 @@ module conv_accelerator_top #(
     .cfg_N(cfg_N),
     .cfg_K(cfg_K),
     .start_load_kernel(start_kernel_load),
+    .kernel_idx(kernel_idx),
     .kernel_done(kernel_done),
     .start_stream_window(start_window),
     .window_col(window_col),

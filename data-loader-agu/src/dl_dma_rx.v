@@ -35,6 +35,7 @@ module dl_dma_rx #(
   wire [15:0] img_bytes_total = N16 * N16;
   wire [15:0] ker_bytes_total = K16 * K16;
 
+
   localparam IDLE    = 3'd0;
   localparam IMG_LO  = 3'd1;
   localparam IMG_HI  = 3'd2;
@@ -48,6 +49,10 @@ module dl_dma_rx #(
   reg [15:0] byte_ptr;
   reg [15:0] img_written;
   reg [15:0] ker_written;
+
+  wire [15:0] ker_left = ker_bytes_total - ker_written;
+  wire [15:0] img_left = img_bytes_total - img_written;
+
 
   always @(*) begin
     rx_ready = 1'b0;
@@ -95,6 +100,20 @@ module dl_dma_rx #(
           if (rx_valid && rx_ready) begin
             buf_lo <= rx_data;
             state  <= IMG_HI;
+            if (img_left <= 16'd4) begin
+              // LAST32: write only low bytes from buf_lo, pad upper 32 with zeros
+              sram0_en    <= 1'b1;
+              sram0_we    <= 1'b1;
+              sram0_addr  <= byte_ptr[15:3];
+              sram0_wdata <= {32'd0, rx_data};
+              sram0_wmask <= 8'hFF;
+
+              // we are done after this write
+              img_written <= img_written + img_left;
+              state <= KER_LO;
+            end else begin
+              state <= IMG_HI; // need second 32-bit
+            end
           end
         end
 
@@ -121,7 +140,20 @@ module dl_dma_rx #(
         KER_LO: begin
           if (rx_valid && rx_ready) begin
             buf_lo <= rx_data;
-            state  <= KER_HI;
+            if (ker_left <= 16'd4) begin
+              // LAST32: write only low bytes from buf_lo, pad upper 32 with zeros
+              sram0_en    <= 1'b1;
+              sram0_we    <= 1'b1;
+              sram0_addr  <= byte_ptr[15:3];
+              sram0_wdata <= {32'd0, rx_data};
+              sram0_wmask <= 8'hFF;
+
+              // we are done after this write
+              ker_written <= ker_written + ker_left;
+              state <= DONE_ST;
+            end else begin
+              state <= KER_HI; // need second 32-bit
+            end
           end
         end
 

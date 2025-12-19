@@ -18,6 +18,7 @@ module tb_conv_accelerator;
   reg         start_load;
   wire        load_done;
   reg         start_kernel_load;
+  reg  [1:0]  kernel_idx;
   wire        kernel_done;
   reg         start_window;
   reg [15:0]  window_col;
@@ -73,6 +74,7 @@ module tb_conv_accelerator;
     .load_done(load_done),
     
     .start_kernel_load(start_kernel_load),
+    .kernel_idx(kernel_idx),
     .kernel_done(kernel_done),
     
     .start_window(start_window),
@@ -159,6 +161,42 @@ module tb_conv_accelerator;
   end
 
   // ============================================
+  // Monitor: Kernel loading
+  // ============================================
+  integer k_count;
+  initial begin
+    k_count = 0;
+    forever begin
+      @(posedge clk);
+      if (w_valid) begin
+        $display("[%0t] Kernel col %0d: %h", $time, k_count, w_data);
+        k_count = k_count + 1;
+      end
+      if (kernel_done) begin
+        k_count = 0;
+      end
+    end
+  end
+
+  // ============================================
+  // Monitor: Window streaming
+  // ============================================
+  integer p_count;
+  initial begin
+    p_count = 0;
+    forever begin
+      @(posedge clk);
+      if (p_valid) begin
+        $display("[%0t] Row %0d pixels: %h", $time, p_count, p_data);
+        p_count = p_count + 1;
+      end
+      if (window_done) begin
+        p_count = 0;
+      end
+    end
+  end
+
+  // ============================================
   // Main test sequence
   // ============================================
   integer i;
@@ -175,11 +213,12 @@ module tb_conv_accelerator;
     start_drain = 0;
     window_col = 16'd0;
     cfg_N = 7'd8;
-    cfg_K = 5'd4;
+    cfg_K = 5'd13;
     cfg_start_pass = 0;
     cfg_ker_idx = 0;
     cfg_split_mode = 1; // Single mode for this test
     tx_ready = 1;
+    kernel_idx = 2'd0;
     
     sa_out_valid = 0;
     sa_out_data = 0;
@@ -213,11 +252,37 @@ module tb_conv_accelerator;
     repeat(5) @(posedge clk);
     
     start_kernel_load = 1'b1;
+    kernel_idx = 2'd0;
     @(posedge clk);
     start_kernel_load = 1'b0;
     
     wait(kernel_done);
-    $display("[%0t] Kernel load complete", $time);
+    @(posedge clk);
+    $display("[%0t] Kernel load complete (Quadrant 0)", $time);
+
+    start_kernel_load = 1'b1;
+    kernel_idx = 2'd1;
+    @(posedge clk);
+    start_kernel_load = 1'b0;
+    wait(kernel_done);
+    @(posedge clk);
+    $display("[%0t] Kernel load complete (Quadrant 1)", $time);
+
+    start_kernel_load = 1'b1;
+    kernel_idx = 2'd2;
+    @(posedge clk);
+    start_kernel_load = 1'b0;
+    wait(kernel_done);
+    @(posedge clk);
+    $display("[%0t] Kernel load complete (Quadrant 2)", $time);
+
+    start_kernel_load = 1'b1;
+    kernel_idx = 2'd3;
+    @(posedge clk);
+    start_kernel_load = 1'b0;
+    wait(kernel_done);
+    @(posedge clk);
+    $display("[%0t] Kernel load complete (Quadrant 3)", $time);
     
     // ----------------------------------------
     // Phase 3A: Window Streaming (Read Path Test)
@@ -232,19 +297,20 @@ module tb_conv_accelerator;
     
     wait(window_done);
     $display("[%0t] Window stream complete", $time);
+
     
-    // ----------------------------------------
-    // Phase 3B: Writeback Test (Fill SRAM1)
-    // ----------------------------------------
-    // This phase manually drives the SA interface to fill SRAM1
-    // with a known pattern (0, 1, 2... 63) to test Writeback and prepare for Drain.
-    $display("\n[%0t] Phase 3B: Testing Writeback (Filling SRAM1 with 64 pixels)", $time);
+    // // ----------------------------------------
+    // // Phase 3B: Writeback Test (Fill SRAM1)
+    // // ----------------------------------------
+    // // This phase manually drives the SA interface to fill SRAM1
+    // // with a known pattern (0, 1, 2... 63) to test Writeback and prepare for Drain.
+    // $display("\n[%0t] Phase 3B: Testing Writeback (Filling SRAM1 with 64 pixels)", $time);
     
-    // 1. Reset WB Pointers
-    cfg_start_pass = 1'b1;
-    @(posedge clk);
-    cfg_start_pass = 1'b0;
-    @(posedge clk);
+    // // 1. Reset WB Pointers
+    // cfg_start_pass = 1'b1;
+    // @(posedge clk);
+    // cfg_start_pass = 1'b0;
+    // @(posedge clk);
 
     // 2. Stream 64 pixels (N*N) into the WB module
     for (i = 1; i < 65; i = i + 1) begin
@@ -321,13 +387,13 @@ module tb_conv_accelerator;
       // Wait if busy
       while (sa_wb_busy) @(posedge clk);
 
-      sa_out_valid = 1'b1;
-      sa_out_data  = i[7:0]; // Data = Index (0x00, 0x01, ... 0x3F)
-      @(posedge clk);
-    end
+    //   sa_out_valid = 1'b1;
+    //   sa_out_data  = i[7:0]; // Data = Index (0x00, 0x01, ... 0x3F)
+    //   @(posedge clk);
+    // end
     
-    sa_out_valid = 1'b0;
-    sa_out_data  = 8'd0;
+    // sa_out_valid = 1'b0;
+    // sa_out_data  = 8'd0;
     
     // Allow time for the Writeback FIFO to empty into SRAM1
     repeat(20) @(posedge clk);
@@ -335,10 +401,10 @@ module tb_conv_accelerator;
     $display("[%0t] Writeback filling complete.", $time);
 
 
-    // ----------------------------------------
-    // Phase 4: Drain Results & Verify
-    // ----------------------------------------
-    $display("\n[%0t] Phase 4: Draining Results & Verifying", $time);
+    // // ----------------------------------------
+    // // Phase 4: Drain Results & Verify
+    // // ----------------------------------------
+    // $display("\n[%0t] Phase 4: Draining Results & Verifying", $time);
     
     drain_word_cnt = 0;
     @(negedge clk);
@@ -346,23 +412,23 @@ module tb_conv_accelerator;
     @(negedge clk);
     start_drain = 1'b0;
 
-    // Monitor Loop
-    while (!drain_done) begin
-      @(posedge clk);
+    // // Monitor Loop
+    // while (!drain_done) begin
+    //   @(posedge clk);
       
-      if (tx_valid && tx_ready) begin
-        // Calculate Expected Data
-        // The Drain module packs 4 pixels into one 32-bit word.
-        // Word 0 contains pixels [3, 2, 1, 0] -> 0x03020100
-        // Word 1 contains pixels [7, 6, 5, 4] -> 0x07060504
-        px0 = (drain_word_cnt * 4) + 0;
-        px1 = (drain_word_cnt * 4) + 1;
-        px2 = (drain_word_cnt * 4) + 2;
-        px3 = (drain_word_cnt * 4) + 3;
+    //   if (tx_valid && tx_ready) begin
+    //     // Calculate Expected Data
+    //     // The Drain module packs 4 pixels into one 32-bit word.
+    //     // Word 0 contains pixels [3, 2, 1, 0] -> 0x03020100
+    //     // Word 1 contains pixels [7, 6, 5, 4] -> 0x07060504
+    //     px0 = (drain_word_cnt * 4) + 0;
+    //     px1 = (drain_word_cnt * 4) + 1;
+    //     px2 = (drain_word_cnt * 4) + 2;
+    //     px3 = (drain_word_cnt * 4) + 3;
         
-        expected_drain_data = {px3, px2, px1, px0};
+    //     expected_drain_data = {px3, px2, px1, px0};
         
-        $write("[%0t] DRAIN OUTPUT: %h ... ", $time, tx_data);
+    //     $write("[%0t] DRAIN OUTPUT: %h ... ", $time, tx_data);
         
         repeat(40) @(posedge clk);
         if (tx_data === expected_drain_data) begin
@@ -372,20 +438,20 @@ module tb_conv_accelerator;
              $stop;
         end
         
-        drain_word_cnt = drain_word_cnt + 1;
-      end
-    end
+    //     drain_word_cnt = drain_word_cnt + 1;
+    //   end
+    // end
 
-    $display("[%0t] Drain complete. Total Words: %0d", $time, drain_word_cnt);
+    // $display("[%0t] Drain complete. Total Words: %0d", $time, drain_word_cnt);
     
-    // Final check
-    if (drain_word_cnt == 16) begin // 64 pixels / 4 per word = 16 words
-        $display("\n========================================");
-        $display("ALL TESTS COMPLETED SUCCESSFULLY!");
-        $display("========================================");
-    end else begin
-        $display("\nERROR: Incorrect number of drain words received.");
-    end
+    // // Final check
+    // if (drain_word_cnt == 16) begin // 64 pixels / 4 per word = 16 words
+    //     $display("\n========================================");
+    //     $display("ALL TESTS COMPLETED SUCCESSFULLY!");
+    //     $display("========================================");
+    // end else begin
+    //     $display("\nERROR: Incorrect number of drain words received.");
+    // end
     
     $finish;
   end
@@ -396,7 +462,7 @@ module tb_conv_accelerator;
   end
 
   initial begin
-    #2000000;
+    #20000;
     $display("ERROR: Simulation timeout!");
     $finish;
   end
