@@ -1,12 +1,14 @@
 `timescale 1ns/1ps
 
-module unaligned_memory_reader (
+module unaligned_memory_reader#(
+  parameter ADDR_W = 13
+)(
   input  wire         clk,
   input  wire         rst_n,
   
   // Request interface
   input  wire         req_valid,
-  input  wire [9:0]   byte_addr,
+  input  wire [ADDR_W - 1:0]   byte_addr,
   input  wire [2:0]   len_bytes,
   output wire         req_ready,
   
@@ -16,10 +18,10 @@ module unaligned_memory_reader (
 
   // Output to the sram:
   output wire         sram_p0_en,
-  output wire [9:0]   sram_p0_addr,
+  output wire [ADDR_W - 4:0]   sram_p0_addr,
   input  wire [63:0]  sram_p0_rdata,
   output wire         sram_p1_en,
-  output wire [9:0]   sram_p1_addr,
+  output wire [ADDR_W - 4:0]   sram_p1_addr,
   input  wire [63:0]  sram_p1_rdata
 );
 
@@ -28,7 +30,7 @@ module unaligned_memory_reader (
   wire [63:0] p1_rdata;
   
   // Address decode (combinational)
-  wire [9:0] word_addr = byte_addr[9:3];
+  wire [ADDR_W - 4:0] word_addr = byte_addr[ADDR_W - 1:3];
   wire [2:0] byte_offset = byte_addr[2:0];
   
   // Pipeline can always accept new requests
@@ -37,31 +39,9 @@ module unaligned_memory_reader (
   assign sram_p0_en   = req_valid;
   assign sram_p0_addr = word_addr;
   assign sram_p1_en   = req_valid;
-  assign sram_p1_addr = word_addr + 10'd1;
+  assign sram_p1_addr =word_addr + {{(ADDR_W-4){1'b0}}, 1'b1};
   assign p0_rdata     = sram_p0_rdata;
   assign p1_rdata     = sram_p1_rdata;
-  
-  // // SRAM instance
-  // sram0_1rw1r_64x1024_wrapper u_sram (
-  //   .clk(clk),
-  //   `ifdef USE_POWER_PINS
-  //     .vccd1(vccd1),
-  //     .vssd1(vssd1),
-  //   `endif
-    
-  //   // Port 0 - Read first word
-  //   .p0_en(req_valid),
-  //   .p0_we(1'b0),
-  //   .p0_addr(word_addr),
-  //   .p0_wdata(64'd0),
-  //   .p0_wmask(8'd0),
-  //   .p0_rdata(p0_rdata),
-    
-  //   // Port 1 - Read second word
-  //   .p1_en(req_valid),
-  //   .p1_addr(word_addr + 10'd1),
-  //   .p1_rdata(p1_rdata)
-  // );
   
   // Register inputs for alignment with SRAM output
   reg         req_valid_d;

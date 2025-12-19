@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 
 module dl_dma_rx #(
-  parameter ADDR_W = 10,              // 8KB SRAM0 => 1024 words => 10 bits
-  parameter KER_BASE_BYTE = 16'd4096   // kernel starts at byte 4096
+  parameter ADDR_W = 10,
+  parameter KER_BASE_BYTE = 16'd4096
 )(
   input                   clk,
   input                   rst_n,
@@ -19,47 +19,28 @@ module dl_dma_rx #(
 
   // SRAM0 write port (64-bit)
   output reg              sram0_en,
-  output reg              sram0_we,        // 1=write
-  output reg [ADDR_W-1:0] sram0_addr,      // word address
+  output reg              sram0_we,
+  output reg [ADDR_W-1:0] sram0_addr,
   output reg [63:0]       sram0_wdata,
-  output reg [7:0]        sram0_wmask,
-
-  // SRAM1 write port (unused for now)
-  output reg              sram1_en,
-  output reg              sram1_we,
-  output reg [ADDR_W-1:0] sram1_addr,
-  output reg [63:0]       sram1_wdata,
-  output reg [7:0]        sram1_wmask
+  output reg [7:0]        sram0_wmask
 );
-
-  // ----------------------------
-  // pad helpers
-  // ----------------------------
-  function [15:0] ceil8;
-    input [15:0] x;
-    begin
-      ceil8 = (x + 16'd7) & 16'hFFF8;
-    end
-  endfunction
 
   wire [15:0] N16 = {9'd0, cfg_N};
   wire [15:0] K16 = {11'd0, cfg_K};
 
-  wire [15:0] row_bytes       = ceil8(N16);
-  wire [15:0] img_bytes_pad   = row_bytes * N16;
+  // PACKED: no padding
+  wire [15:0] row_bytes = N16;
+  wire [15:0] col_bytes = K16;
 
-  wire [15:0] col_bytes       = ceil8(K16);
-  wire [15:0] ker_bytes_pad   = col_bytes * K16;
+  wire [15:0] img_bytes_total = N16 * N16;
+  wire [15:0] ker_bytes_total = K16 * K16;
 
-  // ----------------------------
-  // FSM
-  // ----------------------------
-  localparam IDLE           = 3'd0;
-  localparam IMG_LO         = 3'd1;
-  localparam IMG_HI         = 3'd2;
-  localparam KER_LO         = 3'd3;
-  localparam KER_HI         = 3'd4;
-  localparam DONE_ST        = 3'd5;
+  localparam IDLE    = 3'd0;
+  localparam IMG_LO  = 3'd1;
+  localparam IMG_HI  = 3'd2;
+  localparam KER_LO  = 3'd3;
+  localparam KER_HI  = 3'd4;
+  localparam DONE_ST = 3'd5;
 
   reg [2:0]  state;
   reg [31:0] buf_lo;
@@ -68,7 +49,6 @@ module dl_dma_rx #(
   reg [15:0] img_written;
   reg [15:0] ker_written;
 
-  // combinational: rx_ready + done
   always @(*) begin
     rx_ready = 1'b0;
     done     = 1'b0;
@@ -83,7 +63,6 @@ module dl_dma_rx #(
     endcase
   end
 
-  // sequential
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state <= IDLE;
@@ -99,21 +78,10 @@ module dl_dma_rx #(
       sram0_wdata <= 64'd0;
       sram0_wmask <= 8'h00;
 
-      sram1_en <= 1'b0;
-      sram1_we <= 1'b0;
-      sram1_addr <= {ADDR_W{1'b0}};
-      sram1_wdata <= 64'd0;
-      sram1_wmask <= 8'h00;
-
     end else begin
-      // default: no SRAM pulses
       sram0_en    <= 1'b0;
       sram0_we    <= 1'b0;
       sram0_wmask <= 8'h00;
-
-      sram1_en    <= 1'b0;
-      sram1_we    <= 1'b0;
-      sram1_wmask <= 8'h00;
 
       case (state)
         IDLE: begin
@@ -138,10 +106,10 @@ module dl_dma_rx #(
             sram0_wdata <= {rx_data, buf_lo};
             sram0_wmask <= 8'hFF;
 
-            byte_ptr     <= byte_ptr + 16'd8;
-            img_written  <= img_written + 16'd8;
+            byte_ptr    <= byte_ptr + 16'd8;
+            img_written <= img_written + 16'd8;
 
-            if (img_written + 16'd8 >= img_bytes_pad) begin
+            if (img_written + 16'd8 >= img_bytes_total) begin
               byte_ptr <= KER_BASE_BYTE;
               state    <= KER_LO;
             end else begin
@@ -168,7 +136,7 @@ module dl_dma_rx #(
             byte_ptr    <= byte_ptr + 16'd8;
             ker_written <= ker_written + 16'd8;
 
-            if (ker_written + 16'd8 >= ker_bytes_pad)
+            if (ker_written + 16'd8 >= ker_bytes_total)
               state <= DONE_ST;
             else
               state <= KER_LO;
@@ -176,7 +144,7 @@ module dl_dma_rx #(
         end
 
         DONE_ST: begin
-          state <= IDLE; // done asserted combinationally for 1 cycle
+          state <= IDLE;
         end
       endcase
     end
