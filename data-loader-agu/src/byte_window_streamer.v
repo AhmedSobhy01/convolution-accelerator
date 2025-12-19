@@ -21,11 +21,6 @@ module unaligned_memory_reader (
   output reg [63:0]   resp_data
 );
 
-  // Pipeline stage 1: SRAM address decode
-  reg         stage1_valid;
-  reg [2:0]   stage1_len_bytes;
-  reg [2:0]   stage1_byte_offset;
-  
   // SRAM ports
   wire [63:0] p0_rdata;
   wire [63:0] p1_rdata;
@@ -59,43 +54,47 @@ module unaligned_memory_reader (
     .p1_rdata(p1_rdata)
   );
   
-  // Pipeline Stage 1: Register SRAM access info
+  // Register inputs for alignment with SRAM output
+  reg         req_valid_d;
+  reg [2:0]   len_bytes_d;
+  reg [2:0]   byte_offset_d;
+  
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      stage1_valid <= 1'b0;
-      stage1_len_bytes <= 3'd0;
-      stage1_byte_offset <= 3'd0;
+      req_valid_d <= 1'b0;
+      len_bytes_d <= 3'd0;
+      byte_offset_d <= 3'd0;
     end else begin
-      stage1_valid <= req_valid;
-      stage1_len_bytes <= len_bytes;
-      stage1_byte_offset <= byte_offset;
+      req_valid_d <= req_valid;
+      len_bytes_d <= len_bytes;
+      byte_offset_d <= byte_offset;
     end
   end
   
-  // Pipeline Stage 2: Compute result from SRAM output
+  // Compute result (combinational based on SRAM output)
   wire [127:0] combined = {p1_rdata, p0_rdata};
-  wire [7:0] shift_bits = {stage1_byte_offset, 3'b000};  // byte_offset * 8
+  wire [7:0] shift_bits = {byte_offset_d, 3'b000};  // byte_offset * 8
   
   // Mask generation (combinational)
-  wire [63:0] mask = (stage1_len_bytes == 3'd1) ? 64'h00000000000000FF :
-                     (stage1_len_bytes == 3'd2) ? 64'h000000000000FFFF :
-                     (stage1_len_bytes == 3'd3) ? 64'h0000000000FFFFFF :
-                     (stage1_len_bytes == 3'd4) ? 64'h00000000FFFFFFFF :
-                     (stage1_len_bytes == 3'd5) ? 64'h000000FFFFFFFFFF :
-                     (stage1_len_bytes == 3'd6) ? 64'h0000FFFFFFFFFFFF :
-                     (stage1_len_bytes == 3'd7) ? 64'h00FFFFFFFFFFFFFF :
-                                                   64'hFFFFFFFFFFFFFFFF;
+  wire [63:0] mask = (len_bytes_d == 3'd1) ? 64'h00000000000000FF :
+                     (len_bytes_d == 3'd2) ? 64'h000000000000FFFF :
+                     (len_bytes_d == 3'd3) ? 64'h0000000000FFFFFF :
+                     (len_bytes_d == 3'd4) ? 64'h00000000FFFFFFFF :
+                     (len_bytes_d == 3'd5) ? 64'h000000FFFFFFFFFF :
+                     (len_bytes_d == 3'd6) ? 64'h0000FFFFFFFFFFFF :
+                     (len_bytes_d == 3'd7) ? 64'h00FFFFFFFFFFFFFF :
+                                             64'hFFFFFFFFFFFFFFFF;
   
   // Compute shifted and masked result (combinational)
   wire [63:0] result = (combined >> shift_bits) & mask;
   
-  // Output register
+  // Output directly (no extra pipeline stage)
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       resp_valid <= 1'b0;
       resp_data <= 64'd0;
     end else begin
-      resp_valid <= stage1_valid;
+      resp_valid <= req_valid_d;
       resp_data <= result;
     end
   end
