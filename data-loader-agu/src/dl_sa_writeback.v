@@ -99,7 +99,7 @@ module dl_sa_writeback #(
       
       if (cfg_start_pass) begin
         // Reset Logic: Initialize to the Kernel Index
-        byte_ptr <= { {(ADDR_W){1'b0}}, cfg_ker_idx }; 
+        byte_ptr <= 0; 
         sram_en  <= 0;
         sram_we  <= 0;
       end else begin
@@ -117,13 +117,13 @@ module dl_sa_writeback #(
 
           // Mask Derivation:
           // Byte Lane = byte_ptr % 4 (Lower 2 bits)
-          sram_wmask <= (4'b0001 << byte_ptr[1:0]);
+          sram_wmask <= (4'b0001 << cfg_ker_idx);
           
           // Data: Broadcast 8-bit value to all lanes (mask selects valid one)
           sram_wdata <= {4{fifo_rdata}};
           
-          // Update Counter: Stride by 4
-          byte_ptr   <= byte_ptr + 3'd4;
+          // Update Counter: Stride by 1
+          byte_ptr   <= byte_ptr + 3'd1;
           
         end else begin
           // Idle
