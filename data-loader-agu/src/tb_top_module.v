@@ -387,13 +387,13 @@ module tb_conv_accelerator;
       // Wait if busy
       while (sa_wb_busy) @(posedge clk);
 
-    //   sa_out_valid = 1'b1;
-    //   sa_out_data  = i[7:0]; // Data = Index (0x00, 0x01, ... 0x3F)
-    //   @(posedge clk);
-    // end
+      sa_out_valid = 1'b1;
+      sa_out_data  = i[7:0]; // Data = Index (0x00, 0x01, ... 0x3F)
+      @(posedge clk);
+    end
     
-    // sa_out_valid = 1'b0;
-    // sa_out_data  = 8'd0;
+    sa_out_valid = 1'b0;
+    sa_out_data  = 8'd0;
     
     // Allow time for the Writeback FIFO to empty into SRAM1
     repeat(20) @(posedge clk);
@@ -454,11 +454,6 @@ module tb_conv_accelerator;
     // end
     
     $finish;
-  end
-
-  initial begin
-    $dumpfile("conv_accelerator.vcd");
-    $dumpvars(0, tb_conv_accelerator);
   end
 
   initial begin
