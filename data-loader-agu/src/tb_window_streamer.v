@@ -14,19 +14,21 @@ module tb_unaligned_memory_reader;
   // Response interface
   wire        resp_valid;
   wire [63:0] resp_data;
-  reg         resp_ready;
   
   // DUT instantiation
   unaligned_memory_reader dut (
     .clk(clk),
     .rst_n(rst_n),
+    `ifdef USE_POWER_PINS
+      .vccd1(1'b1),
+      .vssd1(1'b0),
+    `endif
     .req_valid(req_valid),
     .byte_addr(byte_addr),
     .len_bytes(len_bytes),
     .req_ready(req_ready),
     .resp_valid(resp_valid),
-    .resp_data(resp_data),
-    .resp_ready(resp_ready)
+    .resp_data(resp_data)
   );
   
   // Clock generation
@@ -76,7 +78,6 @@ module tb_unaligned_memory_reader;
     req_valid = 0;
     byte_addr = 0;
     len_bytes = 0;
-    resp_ready = 1;
     test_num = 0;
     pass_count = 0;
     fail_count = 0;
@@ -195,38 +196,34 @@ module tb_unaligned_memory_reader;
     $finish;
   end
   
-  // Task to send a read request
+  // Task to send a read request and get result in same cycle
   task send_request(input [9:0] addr, input [2:0] len);
     begin
       @(posedge clk);
       byte_addr = addr;
       len_bytes = len;
       req_valid = 1;
-      
-      // Wait for ready
-      wait(req_ready);
       @(posedge clk);
       req_valid = 0;
     end
   endtask
   
-  // Task to wait for response
+  // Task to wait for response (data valid after 1 cycle for registered SRAM)
   task wait_response();
     begin
-      wait(resp_valid);
-      @(posedge clk);  // Sample the data
+      @(posedge clk);  // Wait one more cycle for SRAM output
     end
   endtask
   
   // Task to check result
   task check_result(input [63:0] expected);
     begin
-      $display("  Got:      0x%016X at time=%0t", resp_data, $time);
+      $display("  Got:      0x%016X", resp_data);
       if (resp_data === expected) begin
-        $display("  Result:   PASS nice");
+        $display("  Result:   PASS ✓");
         pass_count = pass_count + 1;
       end else begin
-        $display("  Result:   FAIL NOOOO");
+        $display("  Result:   FAIL ✗");
         $display("  ERROR: Mismatch!");
         fail_count = fail_count + 1;
       end
