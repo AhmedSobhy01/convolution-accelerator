@@ -232,7 +232,7 @@ module tb_conv_accelerator;
     $display("\n[%0t] Phase 3: Streaming window", $time);
     repeat(5) @(posedge clk);
     
-    window_col = 16'd1;
+    window_col = 16'd0;
     start_window = 1'b1;
     @(posedge clk);
     start_window = 1'b0;
