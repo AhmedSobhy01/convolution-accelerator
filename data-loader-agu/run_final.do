@@ -143,4 +143,4 @@ configure wave -childrowmargin 2
 # 5. Run
 # ------------------------------------------------------------------------------
 run -all
-zoom full
+wave zoom full
