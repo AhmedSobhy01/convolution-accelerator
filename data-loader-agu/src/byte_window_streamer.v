@@ -16,18 +16,26 @@ module unaligned_memory_reader (
   input  wire [2:0]   len_bytes,
   output wire         req_ready,
   
-  // Response interface (combinational)
-  output wire         resp_valid,
-  output wire [63:0]  resp_data
+  // Response interface
+  output reg          resp_valid,
+  output reg [63:0]   resp_data
 );
 
-  // SRAM ports - direct connections
+  // Pipeline stage 1: SRAM address decode
+  reg         stage1_valid;
+  reg [2:0]   stage1_len_bytes;
+  reg [2:0]   stage1_byte_offset;
+  
+  // SRAM ports
   wire [63:0] p0_rdata;
   wire [63:0] p1_rdata;
   
   // Address decode (combinational)
   wire [9:0] word_addr = byte_addr[9:3];
   wire [2:0] byte_offset = byte_addr[2:0];
+  
+  // Pipeline can always accept new requests
+  assign req_ready = 1'b1;
   
   // SRAM instance
   sram0_1rw1r_64x1024_wrapper u_sram (
@@ -51,23 +59,45 @@ module unaligned_memory_reader (
     .p1_rdata(p1_rdata)
   );
   
-  // Combinational logic to extract bytes
+  // Pipeline Stage 1: Register SRAM access info
+  always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      stage1_valid <= 1'b0;
+      stage1_len_bytes <= 3'd0;
+      stage1_byte_offset <= 3'd0;
+    end else begin
+      stage1_valid <= req_valid;
+      stage1_len_bytes <= len_bytes;
+      stage1_byte_offset <= byte_offset;
+    end
+  end
+  
+  // Pipeline Stage 2: Compute result from SRAM output
   wire [127:0] combined = {p1_rdata, p0_rdata};
-  wire [7:0] shift_bits = {byte_offset, 3'b000};  // byte_offset * 8
+  wire [7:0] shift_bits = {stage1_byte_offset, 3'b000};  // byte_offset * 8
   
-  // Mask generation
-  wire [63:0] mask = (len_bytes == 3'd1) ? 64'h00000000000000FF :
-                     (len_bytes == 3'd2) ? 64'h000000000000FFFF :
-                     (len_bytes == 3'd3) ? 64'h0000000000FFFFFF :
-                     (len_bytes == 3'd4) ? 64'h00000000FFFFFFFF :
-                     (len_bytes == 3'd5) ? 64'h000000FFFFFFFFFF :
-                     (len_bytes == 3'd6) ? 64'h0000FFFFFFFFFFFF :
-                     (len_bytes == 3'd7) ? 64'h00FFFFFFFFFFFFFF :
-                                           64'hFFFFFFFFFFFFFFFF;
+  // Mask generation (combinational)
+  wire [63:0] mask = (stage1_len_bytes == 3'd1) ? 64'h00000000000000FF :
+                     (stage1_len_bytes == 3'd2) ? 64'h000000000000FFFF :
+                     (stage1_len_bytes == 3'd3) ? 64'h0000000000FFFFFF :
+                     (stage1_len_bytes == 3'd4) ? 64'h00000000FFFFFFFF :
+                     (stage1_len_bytes == 3'd5) ? 64'h000000FFFFFFFFFF :
+                     (stage1_len_bytes == 3'd6) ? 64'h0000FFFFFFFFFFFF :
+                     (stage1_len_bytes == 3'd7) ? 64'h00FFFFFFFFFFFFFF :
+                                                   64'hFFFFFFFFFFFFFFFF;
   
-  // Output (combinational)
-  assign resp_valid = req_valid;  // Ready same cycle if SRAM is combinational
-  assign resp_data = (combined >> shift_bits) & mask;
-  assign req_ready = 1'b1;  // Always ready
+  // Compute shifted and masked result (combinational)
+  wire [63:0] result = (combined >> shift_bits) & mask;
+  
+  // Output register
+  always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      resp_valid <= 1'b0;
+      resp_data <= 64'd0;
+    end else begin
+      resp_valid <= stage1_valid;
+      resp_data <= result;
+    end
+  end
 
 endmodule

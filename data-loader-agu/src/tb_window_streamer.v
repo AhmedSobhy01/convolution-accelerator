@@ -92,58 +92,73 @@ module tb_unaligned_memory_reader;
     
     $display("\n========================================");
     $display("=== Starting Unaligned Memory Tests ===");
+    $display("=== PIPELINED - 1 result per cycle ===");
     $display("========================================\n");
     
-    // Test 1: byte_addr=0, len_bytes=5
+    // Pipeline test - send requests back-to-back
+    $display("=== Back-to-back Pipeline Test ===\n");
+    
+    // Send all 5 requests in consecutive cycles
     test_num = 1;
+    $display("Issuing 5 back-to-back requests...");
+    
+    @(posedge clk);
+    byte_addr = 10'd0; len_bytes = 3'd5; req_valid = 1;
+    
+    @(posedge clk);
+    byte_addr = 10'd5; len_bytes = 3'd5; req_valid = 1;
+    
+    @(posedge clk);
+    byte_addr = 10'd10; len_bytes = 3'd5; req_valid = 1;
+    
+    @(posedge clk);
+    byte_addr = 10'd15; len_bytes = 3'd5; req_valid = 1;
+
+		$display("\nCollecting pipelined results:\n");
+    
     expected_result = 64'h0000000504030201;
-    $display("Test %0d: byte_addr=0, len_bytes=5", test_num);
+    $display("Test %0d: byte_addr=0, len_bytes=5 at time=%0t", test_num, $time);
     $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd0, 3'd5);
-    wait_response();
     check_result(expected_result);
+    test_num = test_num + 1;
     
-    // Test 2: byte_addr=5, len_bytes=5
-    test_num = 2;
+    @(posedge clk);
+    byte_addr = 10'd20; len_bytes = 3'd5; req_valid = 1;
+    
+    // Now collect results (they come out 2 cycles after request due to pipeline)
+
+    
     expected_result = 64'h0000000A09080706;
-    $display("\nTest %0d: byte_addr=5, len_bytes=5", test_num);
+    $display("\nTest %0d: byte_addr=5, len_bytes=5 at time=%0t", test_num, $time);
     $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd5, 3'd5);
-    wait_response();
     check_result(expected_result);
+    test_num = test_num + 1;
     
-    // Test 3: byte_addr=10, len_bytes=5
-    test_num = 3;
+    @(posedge clk);
     expected_result = 64'h0000000F0E0D0C0B;
-    $display("\nTest %0d: byte_addr=10, len_bytes=5", test_num);
+    $display("\nTest %0d: byte_addr=10, len_bytes=5 at time=%0t", test_num, $time);
     $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd10, 3'd5);
-    wait_response();
     check_result(expected_result);
+    test_num = test_num + 1;
     
-    // Test 4: byte_addr=15, len_bytes=5
-    test_num = 4;
+    @(posedge clk);
     expected_result = 64'h0000001413121110;
-    $display("\nTest %0d: byte_addr=15, len_bytes=5", test_num);
+    $display("\nTest %0d: byte_addr=15, len_bytes=5 at time=%0t", test_num, $time);
     $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd15, 3'd5);
-    wait_response();
     check_result(expected_result);
+    test_num = test_num + 1;
     
-    // Test 5: byte_addr=20, len_bytes=5
-    test_num = 5;
+    @(posedge clk);
     expected_result = 64'h0000001918171615;
-    $display("\nTest %0d: byte_addr=20, len_bytes=5", test_num);
+    $display("\nTest %0d: byte_addr=20, len_bytes=5 at time=%0t", test_num, $time);
     $display("  Expected: 0x%016X", expected_result);
-    send_request(10'd20, 3'd5);
-    wait_response();
     check_result(expected_result);
     
     $display("\n========================================");
-    $display("=== Additional Edge Case Tests ===");
+    $display("=== Individual Request Tests ===");
     $display("========================================\n");
     
-    // Test 6: Aligned 8-byte read at byte_addr=0
+    // Test with spacing between requests
     test_num = 6;
     expected_result = 64'h0807060504030201;
     $display("Test %0d: Aligned 8-byte read at byte_addr=0", test_num);
@@ -196,7 +211,7 @@ module tb_unaligned_memory_reader;
     $finish;
   end
   
-  // Task to send a read request and get result in same cycle
+  // Task to send a read request
   task send_request(input [9:0] addr, input [2:0] len);
     begin
       @(posedge clk);
@@ -208,10 +223,11 @@ module tb_unaligned_memory_reader;
     end
   endtask
   
-  // Task to wait for response (data valid after 1 cycle for registered SRAM)
+  // Task to wait for response (2 cycle pipeline latency)
   task wait_response();
     begin
-      @(posedge clk);  // Wait one more cycle for SRAM output
+      @(posedge clk);
+      @(posedge clk);
     end
   endtask
   
