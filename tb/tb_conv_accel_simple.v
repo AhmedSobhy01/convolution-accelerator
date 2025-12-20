@@ -153,7 +153,7 @@ module tb_conv_accel_simple;
     rst_n = 0;
     start = 0;
     cfg_N = 6'd16;
-    cfg_K = 4'd3;
+    cfg_K = 4'd2;
 
     repeat(5) @(posedge clk);
     rst_n = 1;
