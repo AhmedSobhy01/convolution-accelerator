@@ -30,7 +30,7 @@ module control_unit #(
 
     output reg start_sending_output_to_dram,
     input wire done_sending_output_to_dram,
-  
+
     output reg systolic_data_valid
   );
 
@@ -118,7 +118,7 @@ module control_unit #(
       load_column <= 1'b0;
       systolic_data_valid <= 1'b0;
       start_sending_output_to_dram <= 1'b0;
-      
+
 
 
       case (state)
@@ -174,14 +174,14 @@ module control_unit #(
         begin
 
           // Handle Input data signals
-          load_column <= 1'b1;       
+          load_column <= 1'b1;
 
           if(dl_output_data_valid) begin
-            sa_input_rows_counter <= sa_input_rows_counter + 1; 
+            sa_input_rows_counter <= sa_input_rows_counter + 1;
           end
 
           if (sa_input_rows_counter != 0) begin
-              // load_column <= 1'b0;
+              load_column <= 1'b0;
           end
 
           if (sa_input_rows_counter >= (cfg_N - (cfg_K - current_kernel_height)))

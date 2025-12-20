@@ -301,9 +301,25 @@ module tb_conv_accel_simple;
     $finish;
   end
 
+  initial begin
+    @(posedge start);
+    forever begin
+      #10000;
+      $display("[%0t] DEBUG: CU_state=%0d, kernel_done=%b, window_done=%b, load_kernel=%b, load_column=%b, drain_start=%b, drain_done=%b",
+               $time,
+               dut.u_control.state,
+               dut.u_streamer.kernel_done,
+               dut.u_streamer.window_done,
+               dut.u_control.load_kernel,
+               dut.u_control.load_column,
+               dut.u_control.start_sending_output_to_dram,
+               dut.u_drain.done);
+    end
+  end
+
   // Timeout watchdog
   initial begin
-    #50000;
+    #500000;
     $display("ERROR: Simulation timeout!");
     $finish;
   end
