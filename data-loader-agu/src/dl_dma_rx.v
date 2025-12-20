@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 module dl_dma_rx #(
-  parameter ADDR_W = 10,
+  parameter ADDR_W        = 10,
   parameter KER_BASE_BYTE = 16'd4096
 )(
   input                   clk,
@@ -12,8 +12,7 @@ module dl_dma_rx #(
   input      [4:0]        cfg_K,
   output reg              done,
 
-  // 32-bit input stream
-  input      [31:0]       rx_data,
+  input       [7:0]       rx_data,
   input                   rx_valid,
   output reg              rx_ready,
 
@@ -35,44 +34,34 @@ module dl_dma_rx #(
   wire [15:0] img_bytes_total = N16 * N16;
   wire [15:0] ker_bytes_total = K16 * K16;
 
+  localparam IDLE    = 2'd0;
+  localparam IMG_WR  = 2'd1;
+  localparam KER_WR  = 2'd2;
+  localparam DONE_ST = 2'd3;
 
-  localparam IDLE    = 3'd0;
-  localparam IMG_LO  = 3'd1;
-  localparam IMG_HI  = 3'd2;
-  localparam KER_LO  = 3'd3;
-  localparam KER_HI  = 3'd4;
-  localparam DONE_ST = 3'd5;
-
-  reg [2:0]  state;
-  reg [31:0] buf_lo;
+  reg [1:0]  state;
 
   reg [15:0] byte_ptr;
   reg [15:0] img_written;
   reg [15:0] ker_written;
 
-  wire [15:0] ker_left = ker_bytes_total - ker_written;
-  wire [15:0] img_left = img_bytes_total - img_written;
+  wire [2:0] lane    = byte_ptr[2:0];
+  wire [5:0] shamt   = {lane, 3'b000};
+  wire [63:0] wdata_byte = (64'({56'd0, rx_data}) << shamt);
+  wire [7:0]  wmask_byte = (8'b0000_0001 << lane);
 
+  wire img_last = (img_written + 16'd1 >= img_bytes_total);
+  wire ker_last = (ker_written + 16'd1 >= ker_bytes_total);
 
+  // Handshake ready/done
   always @(*) begin
-    rx_ready = 1'b0;
-    done     = 1'b0;
-
-    case (state)
-      IMG_LO:  rx_ready = 1'b1;
-      IMG_HI:  rx_ready = 1'b1;
-      KER_LO:  rx_ready = 1'b1;
-      KER_HI:  rx_ready = 1'b1;
-      DONE_ST: done     = 1'b1;
-      default: ;
-    endcase
+    rx_ready = (state == IMG_WR) || (state == KER_WR);
+    done     = (state == DONE_ST);
   end
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state <= IDLE;
-      buf_lo <= 32'd0;
-
       byte_ptr <= 16'd0;
       img_written <= 16'd0;
       ker_written <= 16'd0;
@@ -87,91 +76,48 @@ module dl_dma_rx #(
       sram0_en    <= 1'b0;
       sram0_we    <= 1'b0;
       sram0_wmask <= 8'h00;
+      sram0_wdata <= 64'd0;
 
       case (state)
         IDLE: begin
           byte_ptr <= 16'd0;
           img_written <= 16'd0;
           ker_written <= 16'd0;
-          if (start) state <= IMG_LO;
+          if (start) state <= IMG_WR;
         end
 
-        IMG_LO: begin
+        IMG_WR: begin
           if (rx_valid && rx_ready) begin
-            buf_lo <= rx_data;
-            state  <= IMG_HI;
-            if (img_left <= 16'd4) begin
-              // LAST32: write only low bytes from buf_lo, pad upper 32 with zeros
-              sram0_en    <= 1'b1;
-              sram0_we    <= 1'b1;
-              sram0_addr  <= byte_ptr[15:3];
-              sram0_wdata <= {32'd0, rx_data};
-              sram0_wmask <= 8'hFF;
+            sram0_en <= 1'b1;
+            sram0_we <= 1'b1;
+            sram0_addr <= byte_ptr[ADDR_W+2:3]; // word address = byte_ptr >> 3
+            sram0_wdata <= wdata_byte;
+            sram0_wmask <= wmask_byte;
 
-              // we are done after this write
-              img_written <= img_written + img_left;
-              state <= KER_LO;
-            end else begin
-              state <= IMG_HI; // need second 32-bit
-            end
-          end
-        end
+            byte_ptr <= byte_ptr + 16'd1;
+            img_written <= img_written + 16'd1;
 
-        IMG_HI: begin
-          if (rx_valid && rx_ready) begin
-            sram0_en    <= 1'b1;
-            sram0_we    <= 1'b1;
-            sram0_addr  <= byte_ptr[15:3];
-            sram0_wdata <= {rx_data, buf_lo};
-            sram0_wmask <= 8'hFF;
-
-            byte_ptr    <= byte_ptr + 16'd8;
-            img_written <= img_written + 16'd8;
-
-            if (img_written + 16'd8 >= img_bytes_total) begin
+            if (img_last) begin
               byte_ptr <= KER_BASE_BYTE;
-              state    <= KER_LO;
-            end else begin
-              state <= IMG_LO;
+              state <= KER_WR;
             end
           end
         end
 
-        KER_LO: begin
-          if (rx_valid && rx_ready) begin
-            buf_lo <= rx_data;
-            if (ker_left <= 16'd4) begin
-              // LAST32: write only low bytes from buf_lo, pad upper 32 with zeros
-              sram0_en    <= 1'b1;
-              sram0_we    <= 1'b1;
-              sram0_addr  <= byte_ptr[15:3];
-              sram0_wdata <= {32'd0, rx_data};
-              sram0_wmask <= 8'hFF;
-
-              // we are done after this write
-              ker_written <= ker_written + ker_left;
-              state <= DONE_ST;
-            end else begin
-              state <= KER_HI; // need second 32-bit
-            end
-          end
-        end
-
-        KER_HI: begin
+        KER_WR: begin
           if (rx_valid && rx_ready) begin
             sram0_en    <= 1'b1;
             sram0_we    <= 1'b1;
-            sram0_addr  <= byte_ptr[15:3];
-            sram0_wdata <= {rx_data, buf_lo};
-            sram0_wmask <= 8'hFF;
+            sram0_addr  <= byte_ptr[ADDR_W+2:3];
+            sram0_wdata <= wdata_byte;
+            sram0_wmask <= wmask_byte;
 
-            byte_ptr    <= byte_ptr + 16'd8;
-            ker_written <= ker_written + 16'd8;
+            byte_ptr  <= byte_ptr + 16'd1;
+            ker_written <= ker_written + 16'd1;
 
-            if (ker_written + 16'd8 >= ker_bytes_total)
+            if (ker_last) begin
               state <= DONE_ST;
-            else
-              state <= KER_LO;
+            end
           end
         end
 
