@@ -209,8 +209,12 @@ module tb_conv_accel_simple;
   // DRAM Output Capture
   // ============================================
   initial begin : output_capture
+    integer pixel_count;
+    integer pixels_remaining;
+
     tx_ready = 1'b1;
     tx_word_count = 0;
+    pixel_count = 0;
 
     @(posedge start);
 
@@ -219,31 +223,44 @@ module tb_conv_accel_simple;
     forever begin
       @(posedge clk);
       if (tx_valid && tx_ready) begin
-        // Write each byte on a separate line in uppercase hex
-        $fwrite(output_file, "%c%c\n",
-          hex_char(tx_data[7:4]),
-          hex_char(tx_data[3:0]));
+        pixels_remaining = cfg_output_size - pixel_count;
 
-        $fwrite(output_file, "%c%c\n",
-          hex_char(tx_data[15:12]),
-          hex_char(tx_data[11:8]));
+        if (pixels_remaining > 0) begin
+          $fwrite(output_file, "%c%c\n",
+            hex_char(tx_data[7:4]),
+            hex_char(tx_data[3:0]));
+          pixel_count = pixel_count + 1;
+        end
 
-        $fwrite(output_file, "%c%c\n",
-          hex_char(tx_data[23:20]),
-          hex_char(tx_data[19:16]));
+        if (pixels_remaining > 1) begin
+          $fwrite(output_file, "%c%c\n",
+            hex_char(tx_data[15:12]),
+            hex_char(tx_data[11:8]));
+          pixel_count = pixel_count + 1;
+        end
 
-        $fwrite(output_file, "%c%c\n",
-          hex_char(tx_data[31:28]),
-          hex_char(tx_data[27:24]));
+        if (pixels_remaining > 2) begin
+          $fwrite(output_file, "%c%c\n",
+            hex_char(tx_data[23:20]),
+            hex_char(tx_data[19:16]));
+          pixel_count = pixel_count + 1;
+        end
 
-        $display("[%0t] TX: %02X %02X %02X %02X (word %0d)", $time,
-                 tx_data[7:0], tx_data[15:8], tx_data[23:16], tx_data[31:24], tx_word_count);
+        if (pixels_remaining > 3) begin
+          $fwrite(output_file, "%c%c\n",
+            hex_char(tx_data[31:28]),
+            hex_char(tx_data[27:24]));
+          pixel_count = pixel_count + 1;
+        end
+
+        $display("[%0t] TX: %02X %02X %02X %02X (word %0d, pixels written: %0d)", $time,
+                 tx_data[7:0], tx_data[15:8], tx_data[23:16], tx_data[31:24], tx_word_count, pixel_count);
         tx_word_count = tx_word_count + 1;
       end
 
       if (done) begin
         $fclose(output_file);
-        $display("[%0t] Output capture complete. Total words: %0d", $time, tx_word_count);
+        $display("[%0t] Output capture complete. Total words: %0d, Total pixels: %0d", $time, tx_word_count, pixel_count);
         disable output_capture;
       end
     end
