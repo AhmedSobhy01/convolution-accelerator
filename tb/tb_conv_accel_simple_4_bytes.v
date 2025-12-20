@@ -20,7 +20,7 @@ module tb_conv_accel_simple;
   reg         rx_valid;
   wire        rx_ready;
   wire        tx_valid;
-  wire [7:0]  tx_data;
+  wire [31:0] tx_data;
   reg         tx_ready;
 
   // File reading variables
@@ -210,6 +210,7 @@ module tb_conv_accel_simple;
   // ============================================
   initial begin : output_capture
     integer pixel_count;
+    integer pixels_remaining;
 
     tx_ready = 1'b1;
     tx_word_count = 0;
@@ -222,14 +223,38 @@ module tb_conv_accel_simple;
     forever begin
       @(posedge clk);
       if (tx_valid && tx_ready) begin
+        pixels_remaining = cfg_output_size - pixel_count;
 
-        $fwrite(output_file, "%c%c\n",
-          hex_char(tx_data[7:4]),
-          hex_char(tx_data[3:0]));
+        if (pixels_remaining > 0) begin
+          $fwrite(output_file, "%c%c\n",
+            hex_char(tx_data[7:4]),
+            hex_char(tx_data[3:0]));
           pixel_count = pixel_count + 1;
+        end
 
-        $display("[%0t] TX: %02X (byte %0d, pixels written: %0d)", $time,
-                 tx_data, tx_word_count, pixel_count);
+        if (pixels_remaining > 1) begin
+          $fwrite(output_file, "%c%c\n",
+            hex_char(tx_data[15:12]),
+            hex_char(tx_data[11:8]));
+          pixel_count = pixel_count + 1;
+        end
+
+        if (pixels_remaining > 2) begin
+          $fwrite(output_file, "%c%c\n",
+            hex_char(tx_data[23:20]),
+            hex_char(tx_data[19:16]));
+          pixel_count = pixel_count + 1;
+        end
+
+        if (pixels_remaining > 3) begin
+          $fwrite(output_file, "%c%c\n",
+            hex_char(tx_data[31:28]),
+            hex_char(tx_data[27:24]));
+          pixel_count = pixel_count + 1;
+        end
+
+        $display("[%0t] TX: %02X %02X %02X %02X (word %0d, pixels written: %0d)", $time,
+                 tx_data[7:0], tx_data[15:8], tx_data[23:16], tx_data[31:24], tx_word_count, pixel_count);
         tx_word_count = tx_word_count + 1;
       end
 
@@ -295,8 +320,8 @@ module tb_conv_accel_simple;
     $display("Expected output size: %0d x %0d = %0d pixels",
              cfg_N - cfg_K + 1, cfg_N - cfg_K + 1,
              (cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1));
-    $display("Expected TX bytes: %0d (1 pixel per byte)",
-             (cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1));
+    $display("Expected TX words: %0d (4 pixels per word)",
+             ((cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1)) / 4);
 
     $finish;
   end
