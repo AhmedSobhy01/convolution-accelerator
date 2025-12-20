@@ -54,9 +54,9 @@ module systolic_array_tb;
             load_kernel_signal = 1'b0;
             input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
             kernel_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
-            repeat (3) @(posedge clk);
+            repeat (3) @(negedge clk);
             rst = 1'b0;
-            @(posedge clk);
+            @(negedge clk);
         end
     endtask
 
@@ -65,11 +65,11 @@ module systolic_array_tb;
         begin
             load_kernel_signal = 1'b1;
             for (k = 0; k < ARRAY_SIZE; k = k + 1) begin
-                @(negedge clk);
-                kernel_in = kernel_vectors[k];
                 @(posedge clk);
+                kernel_in = kernel_vectors[k];
+                @(negedge clk);
             end
-            @(negedge clk);
+            @(posedge clk);
             load_kernel_signal = 1'b0;
         end
     endtask
@@ -82,23 +82,23 @@ module systolic_array_tb;
             capture_idx = 0;
 
             input_in = input_vectors[0];
-            @(posedge clk);
+            @(negedge clk);
 
             for (i = 1; i < INPUT_DEPTH; i = i + 1) begin
-                @(negedge clk);
-                input_in = input_vectors[i];
                 @(posedge clk);
+                input_in = input_vectors[i];
+                @(negedge clk);
             end
 
             // flush pipeline
             for (i = 0; i < ARRAY_SIZE - 1; i = i + 1) begin
-                @(negedge clk);
-                input_in = input_vectors[INPUT_DEPTH - 1];
                 @(posedge clk);
+                input_in = input_vectors[INPUT_DEPTH - 1];
+                @(negedge clk);
             end
 
             input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
-            repeat (ARRAY_SIZE) @(posedge clk);
+            repeat (ARRAY_SIZE) @(negedge clk);
             outputs_valid = 1'b0;
         end
     endtask
@@ -121,7 +121,7 @@ module systolic_array_tb;
     endtask
 
     // Test 1: Output should be zero during reset
-    always @(posedge clk) begin
+    always @(negedge clk) begin
         if (rst) begin
             #1;
             if (out_data !== {DATA_WIDTH{1'b0}}) begin
@@ -134,7 +134,7 @@ module systolic_array_tb;
     // Load kernel signal should only be high for ARRAY_SIZE cycles during kernel loading
     initial load_kernel_cycle_count = 0;
 
-    always @(posedge clk) begin
+    always @(negedge clk) begin
         if (load_kernel_signal && !rst) begin
             load_kernel_cycle_count = load_kernel_cycle_count + 1;
         end
@@ -149,7 +149,7 @@ module systolic_array_tb;
     end
 
     // Capture outputs
-    always @(negedge clk) begin
+    always @(posedge clk) begin
         if (!rst && outputs_valid) begin
             cycle_after_input_start = cycle_after_input_start + 1;
 
@@ -176,9 +176,9 @@ module systolic_array_tb;
         // [20 40 50]
         // [10 20 30]
         // [100 10 60]
-        kernel_vectors[0] = {8'd20, 8'd10, 8'd100};
-        kernel_vectors[1] = {8'd40, 8'd20, 8'd10};
-        kernel_vectors[2] = {8'd50, 8'd30, 8'd60};
+        kernel_vectors[0] = {8'd20, 8'd40, 8'd50};
+        kernel_vectors[1] = {8'd10, 8'd20, 8'd30};
+        kernel_vectors[2] = {8'd100, 8'd10, 8'd60};
 
         input_vectors[0] = {8'd12, 8'd52, 8'd32}; // [12, 52, 32]
         input_vectors[1] = {8'd20, 8'd18, 8'd28}; // [20, 18, 28]
@@ -205,7 +205,7 @@ module systolic_array_tb;
         input_in           = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
         kernel_in          = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
 
-        repeat (3) @(posedge clk);
+        repeat (3) @(negedge clk);
         if (out_data === {DATA_WIDTH{1'b0}}) begin
             $display("[PASS] Output zero during reset at time %0t", $time);
             pass_count = pass_count + 1;
@@ -216,24 +216,24 @@ module systolic_array_tb;
 
         rst = 1'b0;
 
-        @(posedge clk);
+        @(negedge clk);
 
         load_kernel_signal = 1'b1;
         $display("Loading kernel weights...");
 
         for (idx = 0; idx < ARRAY_SIZE; idx = idx + 1) begin
-            @(negedge clk);
+            @(posedge clk);
             kernel_in = kernel_vectors[idx];
             $display("  Kernel row %0d: %h", idx, kernel_vectors[idx]);
-            @(posedge clk);
+            @(negedge clk);
         end
 
-        @(negedge clk);
+        @(posedge clk);
         load_kernel_signal = 1'b0;
         outputs_valid      = 1'b1;
         output_idx         = 0;
         input_in           = input_vectors[0];
-        @(posedge clk);
+        @(negedge clk);
         $display("Kernel loading complete at time %0t", $time);
 
         if (load_kernel_cycle_count == ARRAY_SIZE) begin
@@ -247,14 +247,14 @@ module systolic_array_tb;
         $display("Feeding input data and checking outputs...");
 
         for (idx = 1; idx < INPUT_DEPTH; idx = idx + 1) begin
-            @(negedge clk);
-            input_in = input_vectors[idx];
             @(posedge clk);
+            input_in = input_vectors[idx];
+            @(negedge clk);
         end
-        @(negedge clk);
+        @(posedge clk);
 
         input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
-        repeat (ARRAY_SIZE) @(posedge clk);
+        repeat (ARRAY_SIZE) @(negedge clk);
         outputs_valid = 1'b0;
 
         verify_outputs("Basic Convolution");
@@ -418,11 +418,11 @@ module systolic_array_tb;
         load_kernel();
 
         input_in = {8'd10, 8'd10, 8'd10};
-        @(posedge clk);
-        @(posedge clk);
+        @(negedge clk);
+        @(negedge clk);
 
         rst = 1'b1;
-        @(posedge clk);
+        @(negedge clk);
 
         #1;
         if (out_data === {DATA_WIDTH{1'b0}}) begin
@@ -434,7 +434,7 @@ module systolic_array_tb;
         end
 
         rst = 1'b0;
-        @(posedge clk);
+        @(negedge clk);
 
         // =========================================================
         // TEST 8: Kernel after Kernel Load
@@ -492,7 +492,7 @@ module systolic_array_tb;
         $finish;
     end
 
-    always @(posedge clk) begin
+    always @(negedge clk) begin
         $display("%0t | load = %0b input = %h kernel = %h -> out = %0d (0x%h)",
         $time, load_kernel_signal, input_in, kernel_in, out_data, out_data);
     end
