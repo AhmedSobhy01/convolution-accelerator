@@ -9,6 +9,7 @@ module tb_conv_accel_simple;
   // Configuration
   reg [6:0] cfg_N;
   reg [4:0] cfg_K;
+  reg [15:0] cfg_output_size;
 
   // Control
   reg start;
@@ -28,6 +29,12 @@ module tb_conv_accel_simple;
   reg [7:0] data_buffer [0:65535]; // pick a size big enough
   integer data_count;
   integer data_index;
+  integer input_count;  // Tracks where input data ends
+
+  // Config file parsing
+  integer cfg_file;
+  reg [8*256-1:0] line_buffer;
+  integer parsed_n, parsed_k, parsed_output_size;
 
   // Output capture
   integer output_file;
@@ -68,11 +75,51 @@ module tb_conv_accel_simple;
   end
 
   // ============================================
-  // File loading task
+  // Config file loading task
   // ============================================
-task load_data_file;
+  task load_config_file;
+    input [1024*8-1:0] filename;
+    integer val;
+    reg [8*256-1:0] line;
+    begin
+      cfg_file = $fopen(filename, "r");
+      if (cfg_file == 0) begin
+        $display("ERROR: Could not open config file %s", filename);
+        $finish;
+      end
+
+      parsed_n = 0;
+      parsed_k = 0;
+      parsed_output_size = 0;
+
+      while (!$feof(cfg_file)) begin
+        scan_result = $fgets(line, cfg_file);
+        if (scan_result != 0) begin
+          val = 0;
+          if ($sscanf(line, "N=%d", val) == 1) begin
+            parsed_n = val;
+          end
+          else if ($sscanf(line, "K=%d", val) == 1) begin
+            parsed_k = val;
+          end
+          else if ($sscanf(line, "Output_Size=%d", val) == 1) begin
+            parsed_output_size = val;
+          end
+        end
+      end
+
+      $fclose(cfg_file);
+      $display("Config loaded: N=%0d, K=%0d, Output_Size=%0d", parsed_n, parsed_k, parsed_output_size);
+    end
+  endtask
+
+  // ============================================
+  // Input file loading task (loads at offset 0)
+  // ============================================
+  task load_input_file;
     input [1024*8-1:0] filename;
     integer tmp;
+    integer local_count;
     begin
       file_handle = $fopen(filename, "r");
       if (file_handle == 0) begin
@@ -80,18 +127,54 @@ task load_data_file;
         $finish;
       end
 
-      data_count = 0;
+      local_count = 0;
       while (!$feof(file_handle)) begin
         tmp = 0;
         scan_result = $fscanf(file_handle, "%h\n", tmp);
         if (scan_result == 1) begin
-          data_buffer[data_count] = tmp[7:0];
-          data_count = data_count + 1;
+          data_buffer[local_count] = tmp[7:0];
+          local_count = local_count + 1;
         end
       end
 
+      input_count = local_count;  // Save input count for kernel appending
+      data_count = local_count;
+
       $fclose(file_handle);
-      $display("Loaded %0d bytes from %s", data_count, filename);
+      $display("Loaded %0d bytes from %s (input data)", local_count, filename);
+    end
+  endtask
+
+  // ============================================
+  // Kernel file loading task (appends after input data)
+  // ============================================
+  task load_kernel_file;
+    input [1024*8-1:0] filename;
+    integer tmp;
+    integer local_count;
+    begin
+      file_handle = $fopen(filename, "r");
+      if (file_handle == 0) begin
+        $display("ERROR: Could not open file %s", filename);
+        $finish;
+      end
+
+      local_count = 0;
+      while (!$feof(file_handle)) begin
+        tmp = 0;
+        scan_result = $fscanf(file_handle, "%h\n", tmp);
+        if (scan_result == 1) begin
+          // Append kernel immediately after input data
+          data_buffer[input_count + local_count] = tmp[7:0];
+          local_count = local_count + 1;
+        end
+      end
+
+      // Total data is input + kernel
+      data_count = input_count + local_count;
+
+      $fclose(file_handle);
+      $display("Loaded %0d bytes from %s (kernel data, appended after input)", local_count, filename);
     end
   endtask
 
@@ -153,7 +236,7 @@ task load_data_file;
           hex_char(tx_data[31:28]),
           hex_char(tx_data[27:24]));
 
-        $display("[%0t] TX: %02X %02X %02X %02X (word %0d)", $time, 
+        $display("[%0t] TX: %02X %02X %02X %02X (word %0d)", $time,
                  tx_data[7:0], tx_data[15:8], tx_data[23:16], tx_data[31:24], tx_word_count);
         tx_word_count = tx_word_count + 1;
       end
@@ -180,8 +263,9 @@ task load_data_file;
     // Initialize
     rst_n = 0;
     start = 0;
-    cfg_N = 6'd16;
-    cfg_K = 4'd2;
+    cfg_N = 7'd0;
+    cfg_K = 5'd0;
+    cfg_output_size = 16'd0;
 
     repeat(5) @(posedge clk);
     rst_n = 1;
@@ -190,10 +274,17 @@ task load_data_file;
     $display("========================================");
     $display("Convolution Accelerator Test");
     $display("========================================");
-    $display("Configuration: N=%0d, K=%0d", cfg_N, cfg_K);
 
-    // Load input data file
-    load_data_file("./tb/inputdata.data");
+    load_config_file("./tb/config.txt");
+    cfg_N = parsed_n[6:0];
+    cfg_K = parsed_k[4:0];
+    cfg_output_size = parsed_output_size[15:0];
+
+    $display("Configuration: N=%0d, K=%0d, Expected Output Size=%0d", cfg_N, cfg_K, cfg_output_size);
+
+    load_input_file("./tb/input.hex");
+
+    load_kernel_file("./tb/kernel.hex");
 
     // Start convolution
     $display("\n[%0t] Starting convolution operation", $time);
