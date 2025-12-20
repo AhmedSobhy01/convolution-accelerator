@@ -137,13 +137,13 @@ add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_sys
 
 add wave -noupdate -divider "Systolic Weights"
 add wave -noupdate -color "Yellow" -label "PE[0][0] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[0]/pe_00/pe_inst/left_reg
-add wave -noupdate -color "Yellow" -label "PE[0][1] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[1]/col[0]/pe_left_col/pe_inst/left_reg
-add wave -noupdate -color "Yellow" -label "PE[0][2] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[2]/col[0]/pe_left_col/pe_inst/left_reg
-add wave -noupdate -color "Yellow" -label "PE[0][3] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[3]/col[0]/pe_left_col/pe_inst/left_reg
-add wave -noupdate -color "Yellow" -label "PE[0][4] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[4]/col[0]/pe_left_col/pe_inst/left_reg
-add wave -noupdate -color "Yellow" -label "PE[0][5] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[5]/col[0]/pe_left_col/pe_inst/left_reg
-add wave -noupdate -color "Yellow" -label "PE[0][6] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[6]/col[0]/pe_left_col/pe_inst/left_reg
-add wave -noupdate -color "Yellow" -label "PE[0][7] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[0]/pe_left_col/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][1] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[1]/pe_top_row/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][2] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[2]/pe_top_row/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][3] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[3]/pe_top_row/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][4] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[4]/pe_top_row/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][5] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[5]/pe_top_row/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][6] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[6]/pe_top_row/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][7] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[7]/pe_top_row/pe_inst/left_reg
 
 add wave -noupdate -divider "Systolic Inputs"
 add wave -noupdate -color "Yellow" -label "PE[0][0] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[0]/pe_00/pe_inst/top_reg
