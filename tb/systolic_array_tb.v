@@ -26,7 +26,7 @@ module systolic_array_tb;
     );
 
     reg [INPUT_WIDTH * ARRAY_SIZE - 1:0] kernel_vectors [0:ARRAY_SIZE-1];
-    reg [INPUT_WIDTH * ARRAY_SIZE - 1:0] input_vectors  [0:INPUT_DEPTH-1];
+    reg [INPUT_WIDTH * ARRAY_SIZE - 1:0] input_vectors  [0:INPUT_DEPTH + ARRAY_SIZE + 2];
     reg [DATA_WIDTH-1:0] expected_outputs [0:INPUT_DEPTH-1];
     integer output_idx;
     reg outputs_valid;
@@ -54,9 +54,9 @@ module systolic_array_tb;
             load_kernel_signal = 1'b0;
             input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
             kernel_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
-            repeat (3) @(negedge clk);
+            repeat (3) @(posedge clk);
             rst = 1'b0;
-            @(negedge clk);
+            @(posedge clk);
         end
     endtask
 
@@ -65,11 +65,11 @@ module systolic_array_tb;
         begin
             load_kernel_signal = 1'b1;
             for (k = 0; k < ARRAY_SIZE; k = k + 1) begin
-                @(posedge clk);
-                kernel_in = kernel_vectors[k];
                 @(negedge clk);
+                kernel_in = kernel_vectors[k];
+                @(posedge clk);
             end
-            @(posedge clk);
+            @(negedge clk);
             load_kernel_signal = 1'b0;
         end
     endtask
@@ -82,23 +82,16 @@ module systolic_array_tb;
             capture_idx = 0;
 
             input_in = input_vectors[0];
-            @(negedge clk);
+            @(posedge clk);
 
-            for (i = 1; i < INPUT_DEPTH; i = i + 1) begin
-                @(posedge clk);
+            for (i = 1; i < INPUT_DEPTH + ARRAY_SIZE + 3; i = i + 1) begin
+                @(negedge clk);
                 input_in = input_vectors[i];
-                @(negedge clk);
-            end
-
-            // flush pipeline
-            for (i = 0; i < ARRAY_SIZE - 1; i = i + 1) begin
                 @(posedge clk);
-                input_in = input_vectors[INPUT_DEPTH - 1];
-                @(negedge clk);
             end
 
             input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
-            repeat (ARRAY_SIZE) @(negedge clk);
+            repeat (2 * ARRAY_SIZE + 5) @(posedge clk);
             outputs_valid = 1'b0;
         end
     endtask
@@ -121,7 +114,7 @@ module systolic_array_tb;
     endtask
 
     // Test 1: Output should be zero during reset
-    always @(negedge clk) begin
+    always @(posedge clk) begin
         if (rst) begin
             #1;
             if (out_data !== {DATA_WIDTH{1'b0}}) begin
@@ -134,7 +127,7 @@ module systolic_array_tb;
     // Load kernel signal should only be high for ARRAY_SIZE cycles during kernel loading
     initial load_kernel_cycle_count = 0;
 
-    always @(negedge clk) begin
+    always @(posedge clk) begin
         if (load_kernel_signal && !rst) begin
             load_kernel_cycle_count = load_kernel_cycle_count + 1;
         end
@@ -149,11 +142,11 @@ module systolic_array_tb;
     end
 
     // Capture outputs
-    always @(posedge clk) begin
+    always @(negedge clk) begin
         if (!rst && outputs_valid) begin
             cycle_after_input_start = cycle_after_input_start + 1;
 
-            if (cycle_after_input_start >= ARRAY_SIZE && capture_idx < INPUT_DEPTH) begin
+            if (cycle_after_input_start >= 2 * ARRAY_SIZE - 1 && capture_idx < INPUT_DEPTH) begin
                 captured_outputs[capture_idx] = out_data;
                 capture_idx = capture_idx + 1;
             end
@@ -176,19 +169,31 @@ module systolic_array_tb;
         // [20 40 50]
         // [10 20 30]
         // [100 10 60]
-        kernel_vectors[0] = {8'd20, 8'd40, 8'd50};
-        kernel_vectors[1] = {8'd10, 8'd20, 8'd30};
-        kernel_vectors[2] = {8'd100, 8'd10, 8'd60};
+        kernel_vectors[0] = {8'd20, 8'd10, 8'd100};
+        kernel_vectors[1] = {8'd40, 8'd20, 8'd10};
+        kernel_vectors[2] = {8'd50, 8'd30, 8'd60};
 
-        input_vectors[0] = {8'd12, 8'd52, 8'd32}; // [12, 52, 32]
-        input_vectors[1] = {8'd20, 8'd18, 8'd28}; // [20, 18, 28]
-        input_vectors[2] = {8'd34, 8'd37, 8'd1}; // [34, 37, 1]
-        input_vectors[3] = {8'd9, 8'd6, 8'd28}; // [9, 6, 28]
-        input_vectors[4] = {8'd22, 8'd98, 8'd32}; // [22, 98, 32]
-        input_vectors[5] = {8'd18, 8'd12, 8'd17}; // [18, 12, 17]
-        input_vectors[6] = {8'd88, 8'd72, 8'd62}; // [88, 72, 62]
-        input_vectors[7] = {8'd42, 8'd23, 8'd28}; // [42, 23, 28]
-        input_vectors[8] = {8'd29, 8'd56, 8'd2}; // [29, 56, 2]
+        // [12, 52, 32]
+        // [20, 18, 28]
+        // [34, 37, 1]
+        // [9, 6, 28]
+        // [22, 98, 32]
+        // [18, 12, 17]
+        // [88, 72, 62]
+        // [42, 23, 28]
+        // [29, 56, 2]
+        input_vectors[0] = {8'd12, 8'd0, 8'd0};
+        input_vectors[1] = {8'd20, 8'd52, 8'd0};
+        input_vectors[2] = {8'd34, 8'd18, 8'd32};
+        input_vectors[3] = {8'd9, 8'd37, 8'd28};
+        input_vectors[4] = {8'd22, 8'd6, 8'd1};
+        input_vectors[5] = {8'd18, 8'd98, 8'd28};
+        input_vectors[6] = {8'd88, 8'd12, 8'd32};
+        input_vectors[7] = {8'd42, 8'd72, 8'd17};
+        input_vectors[8] = {8'd29, 8'd23, 8'd62};
+        input_vectors[9] = {8'd0, 8'd56, 8'd28};
+        input_vectors[10] = {8'd0, 8'd0, 8'd2};
+
 
         expected_outputs[0] = 32'd9150;
         expected_outputs[1] = 32'd6270;
@@ -205,7 +210,7 @@ module systolic_array_tb;
         input_in           = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
         kernel_in          = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
 
-        repeat (3) @(negedge clk);
+        repeat (3) @(posedge clk);
         if (out_data === {DATA_WIDTH{1'b0}}) begin
             $display("[PASS] Output zero during reset at time %0t", $time);
             pass_count = pass_count + 1;
@@ -216,24 +221,25 @@ module systolic_array_tb;
 
         rst = 1'b0;
 
-        @(negedge clk);
+        @(posedge clk);
 
         load_kernel_signal = 1'b1;
         $display("Loading kernel weights...");
 
         for (idx = 0; idx < ARRAY_SIZE; idx = idx + 1) begin
-            @(posedge clk);
+            @(negedge clk);
             kernel_in = kernel_vectors[idx];
             $display("  Kernel row %0d: %h", idx, kernel_vectors[idx]);
-            @(negedge clk);
+            @(posedge clk);
         end
 
-        @(posedge clk);
+        @(negedge clk);
         load_kernel_signal = 1'b0;
+        cycle_after_input_start = 0;
         outputs_valid      = 1'b1;
         output_idx         = 0;
         input_in           = input_vectors[0];
-        @(negedge clk);
+        @(posedge clk);
         $display("Kernel loading complete at time %0t", $time);
 
         if (load_kernel_cycle_count == ARRAY_SIZE) begin
@@ -246,15 +252,15 @@ module systolic_array_tb;
 
         $display("Feeding input data and checking outputs...");
 
-        for (idx = 1; idx < INPUT_DEPTH; idx = idx + 1) begin
-            @(posedge clk);
-            input_in = input_vectors[idx];
+        for (idx = 1; idx < INPUT_DEPTH + 2; idx = idx + 1) begin
             @(negedge clk);
+            input_in = input_vectors[idx];
+            @(posedge clk);
         end
-        @(posedge clk);
+        @(negedge clk);
 
         input_in = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
-        repeat (ARRAY_SIZE) @(negedge clk);
+        repeat (2 * ARRAY_SIZE + 5) @(posedge clk);
         outputs_valid = 1'b0;
 
         verify_outputs("Basic Convolution");
@@ -269,8 +275,10 @@ module systolic_array_tb;
         do_reset();
 
         // put zero input but same kernel
-        for (idx = 0; idx < INPUT_DEPTH; idx = idx + 1) begin
+        for (idx = 0; idx < INPUT_DEPTH + ARRAY_SIZE + 3; idx = idx + 1) begin
             input_vectors[idx] = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
+        end
+        for (idx = 0; idx < INPUT_DEPTH; idx = idx + 1) begin
             expected_outputs[idx] = 32'd0;
         end
 
@@ -296,15 +304,30 @@ module systolic_array_tb;
         kernel_vectors[1] = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
         kernel_vectors[2] = {(INPUT_WIDTH * ARRAY_SIZE){1'b0}};
 
-        input_vectors[0] = {8'd255, 8'd255, 8'd255}; // [255, 255, 255]
-        input_vectors[1] = {8'd128, 8'd128, 8'd128}; // [128, 128, 128]
-        input_vectors[2] = {8'd64, 8'd64, 8'd64}; // [64, 64, 64]
-        input_vectors[3] = {8'd32, 8'd32, 8'd32}; // [32, 32, 32]
-        input_vectors[4] = {8'd16, 8'd16, 8'd16}; // [16, 16, 16]
-        input_vectors[5] = {8'd8, 8'd8, 8'd8}; // [8, 8, 8]
-        input_vectors[6] = {8'd4, 8'd4, 8'd4}; // [4, 4, 4]
-        input_vectors[7] = {8'd2, 8'd2, 8'd2}; // [2, 2, 2]
-        input_vectors[8] = {8'd1, 8'd1, 8'd1}; // [1, 1, 1]
+        // [255, 255, 255]
+        // [128, 128, 128]
+        // [64, 64, 64]
+        // [32, 32, 32]
+        // [16, 16, 16]
+        // [8, 8, 8]
+        // [4, 4, 4]
+        // [2, 2, 2]
+        // [1, 1, 1]
+        input_vectors[0] = {8'd255, 8'd0, 8'd0};
+        input_vectors[1] = {8'd128, 8'd255, 8'd0};
+        input_vectors[2] = {8'd64, 8'd128, 8'd255};
+        input_vectors[3] = {8'd32, 8'd64, 8'd128};
+        input_vectors[4] = {8'd16, 8'd32, 8'd64};
+        input_vectors[5] = {8'd8, 8'd16, 8'd32};
+        input_vectors[6] = {8'd4, 8'd8, 8'd16};
+        input_vectors[7] = {8'd2, 8'd4, 8'd8};
+        input_vectors[8] = {8'd1, 8'd2, 8'd4};
+        input_vectors[9] = {8'd0, 8'd1, 8'd2};
+        input_vectors[10] = {8'd0, 8'd0, 8'd1};
+        input_vectors[11] = {8'd0, 8'd0, 8'd0};
+        input_vectors[12] = {8'd0, 8'd0, 8'd0};
+        input_vectors[13] = {8'd0, 8'd0, 8'd0};
+        input_vectors[14] = {8'd0, 8'd0, 8'd0};
 
         for (idx = 0; idx < INPUT_DEPTH; idx = idx + 1) begin
             expected_outputs[idx] = 32'd0;
@@ -333,8 +356,23 @@ module systolic_array_tb;
         kernel_vectors[2] = {8'd1, 8'd1, 8'd1};
 
         // All ones inputs
+        input_vectors[0] = {8'd1, 8'd0, 8'd0};
+        input_vectors[1] = {8'd1, 8'd1, 8'd0};
+        input_vectors[2] = {8'd1, 8'd1, 8'd1};
+        input_vectors[3] = {8'd1, 8'd1, 8'd1};
+        input_vectors[4] = {8'd1, 8'd1, 8'd1};
+        input_vectors[5] = {8'd1, 8'd1, 8'd1};
+        input_vectors[6] = {8'd1, 8'd1, 8'd1};
+        input_vectors[7] = {8'd1, 8'd1, 8'd1};
+        input_vectors[8] = {8'd1, 8'd1, 8'd1};
+        input_vectors[9] = {8'd1, 8'd1, 8'd1};
+        input_vectors[10] = {8'd1, 8'd1, 8'd1};
+        input_vectors[11] = {8'd0, 8'd1, 8'd1};
+        input_vectors[12] = {8'd0, 8'd0, 8'd1};
+        input_vectors[13] = {8'd0, 8'd0, 8'd0};
+        input_vectors[14] = {8'd0, 8'd0, 8'd0};
+
         for (idx = 0; idx < INPUT_DEPTH; idx = idx + 1) begin
-            input_vectors[idx] = {8'd1, 8'd1, 8'd1};
             expected_outputs[idx] = 32'd9;
         end
 
@@ -361,8 +399,23 @@ module systolic_array_tb;
         kernel_vectors[2] = {8'd255, 8'd255, 8'd255};
 
         // Max value inputs
+        input_vectors[0] = {8'd255, 8'd0, 8'd0};
+        input_vectors[1] = {8'd255, 8'd255, 8'd0};
+        input_vectors[2] = {8'd255, 8'd255, 8'd255};
+        input_vectors[3] = {8'd255, 8'd255, 8'd255};
+        input_vectors[4] = {8'd255, 8'd255, 8'd255};
+        input_vectors[5] = {8'd255, 8'd255, 8'd255};
+        input_vectors[6] = {8'd255, 8'd255, 8'd255};
+        input_vectors[7] = {8'd255, 8'd255, 8'd255};
+        input_vectors[8] = {8'd255, 8'd255, 8'd255};
+        input_vectors[9] = {8'd255, 8'd255, 8'd255};
+        input_vectors[10] = {8'd255, 8'd255, 8'd255};
+        input_vectors[11] = {8'd0, 8'd255, 8'd255};
+        input_vectors[12] = {8'd0, 8'd0, 8'd255};
+        input_vectors[13] = {8'd0, 8'd0, 8'd0};
+        input_vectors[14] = {8'd0, 8'd0, 8'd0};
+
         for (idx = 0; idx < INPUT_DEPTH; idx = idx + 1) begin
-            input_vectors[idx] = {8'd255, 8'd255, 8'd255};
             expected_outputs[idx] = 32'd585225;
         end
 
@@ -388,8 +441,31 @@ module systolic_array_tb;
         kernel_vectors[1] = {8'd0, 8'd1, 8'd0};
         kernel_vectors[2] = {8'd0, 8'd0, 8'd0};
 
+        // [10, 50, 90]
+        // [10, 50, 90]
+        // [10, 50, 90]
+        // [10, 50, 90]
+        // [10, 50, 90]
+        // [10, 50, 90]
+        // [10, 50, 90]
+        // [10, 50, 90]
+        input_vectors[0] = {8'd10, 8'd0, 8'd0};
+        input_vectors[1] = {8'd10, 8'd50, 8'd0};
+        input_vectors[2] = {8'd10, 8'd50, 8'd90};
+        input_vectors[3] = {8'd10, 8'd50, 8'd90};
+        input_vectors[4] = {8'd10, 8'd50, 8'd90};
+        input_vectors[5] = {8'd10, 8'd50, 8'd90};
+        input_vectors[6] = {8'd10, 8'd50, 8'd90};
+        input_vectors[7] = {8'd10, 8'd50, 8'd90};
+        input_vectors[8] = {8'd10, 8'd50, 8'd90};
+        input_vectors[9] = {8'd10, 8'd50, 8'd90};
+        input_vectors[10] = {8'd10, 8'd50, 8'd90};
+        input_vectors[11] = {8'd0, 8'd50, 8'd90};
+        input_vectors[12] = {8'd0, 8'd0, 8'd90};
+        input_vectors[13] = {8'd0, 8'd0, 8'd0};
+        input_vectors[14] = {8'd0, 8'd0, 8'd0};
+
         for (idx = 0; idx < INPUT_DEPTH; idx = idx + 1) begin
-            input_vectors[idx] = {8'd10, 8'd50, 8'd90};
             expected_outputs[idx] = 32'd50;
         end
 
@@ -418,11 +494,11 @@ module systolic_array_tb;
         load_kernel();
 
         input_in = {8'd10, 8'd10, 8'd10};
-        @(negedge clk);
-        @(negedge clk);
+        @(posedge clk);
+        @(posedge clk);
 
         rst = 1'b1;
-        @(negedge clk);
+        @(posedge clk);
 
         #1;
         if (out_data === {DATA_WIDTH{1'b0}}) begin
@@ -434,7 +510,7 @@ module systolic_array_tb;
         end
 
         rst = 1'b0;
-        @(negedge clk);
+        @(posedge clk);
 
         // =========================================================
         // TEST 8: Kernel after Kernel Load
@@ -466,8 +542,23 @@ module systolic_array_tb;
 
         load_kernel();
 
+        input_vectors[0] = {8'd1, 8'd0, 8'd0};
+        input_vectors[1] = {8'd1, 8'd1, 8'd0};
+        input_vectors[2] = {8'd1, 8'd1, 8'd1};
+        input_vectors[3] = {8'd1, 8'd1, 8'd1};
+        input_vectors[4] = {8'd1, 8'd1, 8'd1};
+        input_vectors[5] = {8'd1, 8'd1, 8'd1};
+        input_vectors[6] = {8'd1, 8'd1, 8'd1};
+        input_vectors[7] = {8'd1, 8'd1, 8'd1};
+        input_vectors[8] = {8'd1, 8'd1, 8'd1};
+        input_vectors[9] = {8'd1, 8'd1, 8'd1};
+        input_vectors[10] = {8'd1, 8'd1, 8'd1};
+        input_vectors[11] = {8'd0, 8'd1, 8'd1};
+        input_vectors[12] = {8'd0, 8'd0, 8'd1};
+        input_vectors[13] = {8'd0, 8'd0, 8'd0};
+        input_vectors[14] = {8'd0, 8'd0, 8'd0};
+
         for (idx = 0; idx < INPUT_DEPTH; idx = idx + 1) begin
-            input_vectors[idx] = {8'd1, 8'd1, 8'd1};
             expected_outputs[idx] = 32'd18;
         end
 
@@ -492,7 +583,7 @@ module systolic_array_tb;
         $finish;
     end
 
-    always @(negedge clk) begin
+    always @(posedge clk) begin
         $display("%0t | load = %0b input = %h kernel = %h -> out = %0d (0x%h)",
         $time, load_kernel_signal, input_in, kernel_in, out_data, out_data);
     end
