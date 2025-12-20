@@ -20,7 +20,7 @@ module conv_accelerator_top #(
   output wire         done,           // Operation complete
 
   // DRAM input stream (32-bit) -> SRAM0
-  input  wire [31:0]  rx_data,
+  input  wire [7:0]  rx_data,
   input  wire         rx_valid,
   output wire         rx_ready,
   

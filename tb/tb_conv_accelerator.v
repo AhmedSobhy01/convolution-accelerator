@@ -27,7 +27,7 @@ module tb_conv_accelerator;
   wire        drain_done;
 
   // DRAM interface
-  reg [31:0]  rx_data;
+  reg [7:0]  rx_data;
   reg         rx_valid;
   wire        rx_ready;
   wire        tx_valid;
@@ -48,7 +48,7 @@ module tb_conv_accelerator;
   // File reading variables
   integer file_handle;
   integer scan_result;
-  reg [31:0] data_buffer [0:8191];
+  reg [7:0] data_buffer [0:65535]; // pick a size big enough
   integer data_count;
   integer data_index;
 
@@ -115,50 +115,56 @@ module tb_conv_accelerator;
   // ============================================
   task load_data_file;
     input [1024*8-1:0] filename;
+    integer tmp;
     begin
       file_handle = $fopen(filename, "r");
       if (file_handle == 0) begin
         $display("ERROR: Could not open file %s", filename);
         $finish;
       end
-      
+
       data_count = 0;
       while (!$feof(file_handle)) begin
-        scan_result = $fscanf(file_handle, "%h\n", data_buffer[data_count]);
+        tmp = 0;
+        scan_result = $fscanf(file_handle, "%h\n", tmp);
         if (scan_result == 1) begin
+          data_buffer[data_count] = tmp[7:0];
           data_count = data_count + 1;
         end
       end
-      
+
       $fclose(file_handle);
-      $display("Loaded %0d words from %s", data_count, filename);
+      $display("Loaded %0d bytes from %s", data_count, filename);
     end
   endtask
+
 
   // ============================================
   // DRAM Input Streaming
   // ============================================
   initial begin
-    rx_data = 32'd0;
-    rx_valid = 1'b0;
+    rx_data   = 8'd0;
+    rx_valid  = 1'b0;
     data_index = 0;
-    
+
     @(posedge start_load);
     @(posedge clk);
-    
+
+    rx_valid = 1'b1;
     while (data_index < data_count) begin
       rx_data = data_buffer[data_index];
-      rx_valid = 1'b1;
-      
+
       @(posedge clk);
-      while (!rx_ready) @(posedge clk);
-      
-      data_index = data_index + 1;
+      if (rx_ready) begin
+        data_index = data_index + 1;
+      end
+      // else: keep same rx_data and keep rx_valid high until accepted
     end
-    
+
     rx_valid = 1'b0;
-    rx_data = 32'd0;
+    rx_data  = 8'd0;
   end
+
 
   // ============================================
   // Monitor: Kernel loading
@@ -213,7 +219,7 @@ module tb_conv_accelerator;
     start_drain = 0;
     window_col = 16'd0;
     cfg_N = 7'd16;
-    cfg_K = 5'd12;
+    cfg_K = 5'd2;
     cfg_start_pass = 0;
     cfg_ker_idx = 0;
     cfg_split_mode = 1; // Single mode for this test
@@ -252,16 +258,16 @@ module tb_conv_accelerator;
     repeat(5) @(posedge clk);
     
     start_kernel_load = 1'b1;
-    kernel_idx = 2'd2;
+    kernel_idx = 2'd0;
     @(posedge clk);
     start_kernel_load = 1'b0;
     
     wait(kernel_done);
     @(posedge clk);
-    $display("[%0t] Kernel load complete (Quadrant 2)", $time);
+    $display("[%0t] Kernel load complete (Quadrant 0)", $time);
     
     start_window = 1'b1;
-    kernel_idx = 2'd2;
+    kernel_idx = 2'd0;
     window_col = 16'd0;
     @(posedge clk);
     start_window = 1'b0;
