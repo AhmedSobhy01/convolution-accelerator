@@ -39,9 +39,11 @@ module control_unit #(
     CONFIG             = 4'd1,
     LOAD_DATA_TO_SRAM  = 4'd2,
     LOAD_K_TO_SA       = 4'd3,
-    COMPUTE            = 4'd4,
-    STORE_OUT          = 4'd5,
-    DONE_STATE         = 4'd6;
+    WAIT_LOAD_K_TO_SA  = 4'd4,
+    COMPUTE            = 4'd5,
+    STORE_OUT          = 4'd6,
+    WAIT_STORE_OUT     = 4'd7,
+    DONE_STATE         = 4'd8;
 
   reg [3:0] state;
 
@@ -154,6 +156,14 @@ module control_unit #(
           load_kernel <= 1'b1;
           start_pass_dl <= 1;
 
+          state <= WAIT_LOAD_K_TO_SA;
+        end
+
+        WAIT_LOAD_K_TO_SA:
+        begin
+          load_kernel <= 1'b0;
+          start_pass_dl <= 0;
+
           if (done_loading_kernel_to_sa)
           begin
             sa_input_rows_counter <= 8'd0;
@@ -166,13 +176,16 @@ module control_unit #(
 
         COMPUTE:
         begin
-          start_pass_dl <= 0;
 
           // Handle Input data signals
-          load_column <= 1'b1;
+          load_column <= 1'b1;       
 
           if(dl_output_data_valid) begin
-            sa_input_rows_counter <= sa_input_rows_counter + 1;          
+            sa_input_rows_counter <= sa_input_rows_counter + 1; 
+          end
+
+          if (sa_input_rows_counter != 0) begin
+              load_column <= 1'b0;
           end
 
           if (sa_input_rows_counter >= (cfg_N - (cfg_K - current_kernel_height)))
@@ -223,6 +236,12 @@ module control_unit #(
         STORE_OUT:
         begin
           start_sending_output_to_dram <= 1'b1;
+
+          state <= WAIT_STORE_OUT;
+        end
+        WAIT_STORE_OUT:
+        begin
+          start_sending_output_to_dram <= 1'b0;
 
           if (done_sending_output_to_dram)
           begin
