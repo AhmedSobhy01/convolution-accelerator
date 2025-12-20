@@ -169,9 +169,9 @@ module systolic_array_tb;
         // [20 40 50]
         // [10 20 30]
         // [100 10 60]
-        kernel_vectors[0] = {8'd20, 8'd10, 8'd100};
-        kernel_vectors[1] = {8'd40, 8'd20, 8'd10};
-        kernel_vectors[2] = {8'd50, 8'd30, 8'd60};
+        kernel_vectors[0] = {8'd20, 8'd40, 8'd50};
+        kernel_vectors[1] = {8'd10, 8'd20, 8'd30};
+        kernel_vectors[2] = {8'd100, 8'd10, 8'd60};
 
         // [12, 52, 32]
         // [20, 18, 28]

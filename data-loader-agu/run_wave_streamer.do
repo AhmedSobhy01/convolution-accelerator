@@ -28,8 +28,8 @@ puts "Compiling byte_window_streamer.v from $src_path"
 vlog -work work $src_path/byte_window_streamer.v  
 
 # Compile Design and Testbench
-puts "Compiling kernel_window_streamer_v2.v from $src_path"
-vlog -work work $src_path/kernel_window_streamer_v2.v
+puts "Compiling kernel_window_streamer.v from $src_path"
+vlog -work work $src_path/kernel_window_streamer.v
 
 puts "Compiling tb_wave_streamer.v from $src_path"
 vlog -work work $src_path/tb_wave_streamer.v
