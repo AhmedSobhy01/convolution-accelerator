@@ -21,6 +21,10 @@ vlog -work work data-loader-agu/src/dl_drain_stream.v
 vlog -work work data-loader-agu/src/sram0_wrapper.v
 vlog -work work data-loader-agu/src/sram1_wrapper.v
 
+# Compile systolic array modules
+vlog -work work rtl/pe.v
+vlog -work work rtl/systolic_array.v
+
 # Compile top level
 vlog -work work conv_accelerator_top.v
 
@@ -85,6 +89,80 @@ add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/w_valid
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/w_data
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/p_valid
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/p_data
+
+add wave -noupdate -divider "SYSTOLIC ARRAY"
+add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_systolic_array/clk
+add wave -noupdate -color "Red" /tb_conv_accel_simple/dut/u_systolic_array/rst
+add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/u_systolic_array/load_kernel_signal
+add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/input_in
+add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/kernel_in
+add wave -noupdate -color "Green" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/out_data
+add wave -noupdate -color "Yellow" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/sum_partials
+
+add wave -noupdate -divider "SYSTOLIC ARRAY INTERNAL"
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/sa_result
+add wave -noupdate -color "Orange" -radix binary /tb_conv_accel_simple/dut/sa_valid_pipe
+add wave -noupdate -color "White" /tb_conv_accel_simple/dut/sa_accept_intput
+
+add wave -noupdate -divider "SYSTOLIC ARRAY PE ROW 0"
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[0][0]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[0][1]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[0][2]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[0][3]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[0][4]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[0][5]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[0][6]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[0][7]
+
+add wave -noupdate -divider "SYSTOLIC ARRAY PE ROW 1"
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[1][0]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[1][1]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[1][2]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[1][3]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[1][4]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[1][5]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[1][6]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[1][7]
+
+add wave -noupdate -divider "SYSTOLIC ARRAY PE ROW 2"
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[2][0]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[2][1]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[2][2]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[2][3]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[2][4]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[2][5]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[2][6]
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/pe_out_partials[2][7]
+
+add wave -noupdate -divider "Systolic Weights"
+add wave -noupdate -color "Yellow" -label "PE[0][0] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[0]/pe_00/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][1] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[1]/col[0]/pe_left_col/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][2] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[2]/col[0]/pe_left_col/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][3] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[3]/col[0]/pe_left_col/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][4] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[4]/col[0]/pe_left_col/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][5] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[5]/col[0]/pe_left_col/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][6] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[6]/col[0]/pe_left_col/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][7] Weight" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[0]/pe_left_col/pe_inst/left_reg
+
+add wave -noupdate -divider "Systolic Inputs"
+add wave -noupdate -color "Yellow" -label "PE[0][0] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[0]/pe_00/pe_inst/top_reg
+add wave -noupdate -color "Yellow" -label "PE[0][1] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[1]/pe_top_row/pe_inst/top_reg
+add wave -noupdate -color "Yellow" -label "PE[0][2] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[2]/pe_top_row/pe_inst/top_reg
+add wave -noupdate -color "Yellow" -label "PE[0][3] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[3]/pe_top_row/pe_inst/top_reg
+add wave -noupdate -color "Yellow" -label "PE[0][4] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[4]/pe_top_row/pe_inst/top_reg
+add wave -noupdate -color "Yellow" -label "PE[0][5] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[5]/pe_top_row/pe_inst/top_reg
+add wave -noupdate -color "Yellow" -label "PE[0][6] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[6]/pe_top_row/pe_inst/top_reg
+add wave -noupdate -color "Yellow" -label "PE[0][7] Inputs" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[7]/pe_top_row/pe_inst/top_reg
+
+add wave -noupdate -divider "Systolic InTop"
+add wave -noupdate -color "Yellow" -label "PE[0][0] in_top" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[0]/pe_00/pe_inst/in_top
+add wave -noupdate -color "Yellow" -label "PE[0][1] in_top" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[1]/pe_top_row/pe_inst/in_top
+add wave -noupdate -color "Yellow" -label "PE[0][2] in_top" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[2]/pe_top_row/pe_inst/in_top
+add wave -noupdate -color "Yellow" -label "PE[0][3] in_top" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[3]/pe_top_row/pe_inst/in_top
+add wave -noupdate -color "Yellow" -label "PE[0][4] in_top" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[4]/pe_top_row/pe_inst/in_top
+add wave -noupdate -color "Yellow" -label "PE[0][5] in_top" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[5]/pe_top_row/pe_inst/in_top
+add wave -noupdate -color "Yellow" -label "PE[0][6] in_top" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[6]/pe_top_row/pe_inst/in_top
+add wave -noupdate -color "Yellow" -label "PE[0][7] in_top" -radix unsigned /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[7]/pe_top_row/pe_inst/in_top
 
 add wave -noupdate -divider "WRITEBACK"
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/sa_out_valid
