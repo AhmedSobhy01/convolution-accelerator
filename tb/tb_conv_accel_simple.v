@@ -136,8 +136,25 @@ task load_data_file;
     forever begin
       @(posedge clk);
       if (tx_valid && tx_ready) begin
-        $fwrite(output_file, "%08h\n", tx_data);
-        $display("[%0t] TX: %08h (word %0d)", $time, tx_data, tx_word_count);
+        // Write each byte on a separate line in uppercase hex
+        $fwrite(output_file, "%c%c\n",
+          hex_char(tx_data[7:4]),
+          hex_char(tx_data[3:0]));
+
+        $fwrite(output_file, "%c%c\n",
+          hex_char(tx_data[15:12]),
+          hex_char(tx_data[11:8]));
+
+        $fwrite(output_file, "%c%c\n",
+          hex_char(tx_data[23:20]),
+          hex_char(tx_data[19:16]));
+
+        $fwrite(output_file, "%c%c\n",
+          hex_char(tx_data[31:28]),
+          hex_char(tx_data[27:24]));
+
+        $display("[%0t] TX: %02X %02X %02X %02X (word %0d)", $time, 
+                 tx_data[7:0], tx_data[15:8], tx_data[23:16], tx_data[31:24], tx_word_count);
         tx_word_count = tx_word_count + 1;
       end
 
@@ -148,6 +165,13 @@ task load_data_file;
       end
     end
   end
+  function automatic [7:0] hex_char(input [3:0] nibble);
+    if (nibble < 4'd10)
+      hex_char = "0" + nibble;
+    else
+      hex_char = "A" + (nibble - 4'd10);
+  endfunction
+
 
   // ============================================
   // Main test sequence

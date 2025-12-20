@@ -13,7 +13,7 @@ module control_unit #(
     output reg [6:0] dl_cfg_N,
     output reg [4:0] dl_cfg_K,
 
-    output reg start_loading_data_to_sram,
+    output wire start_loading_data_to_sram,
     input wire done_loading_data_to_sram,
 
     output reg start_pass_dl,
@@ -100,7 +100,6 @@ module control_unit #(
     if (!rst_n)
     begin
       state <= IDLE;
-      start_loading_data_to_sram <= 1'b0;
       load_column <= 1'b0;
       systolic_data_valid <= 1'b0;
       start_sending_output_to_dram <= 1'b0;
@@ -114,7 +113,6 @@ module control_unit #(
     end
     else
     begin
-      start_loading_data_to_sram <= 1'b0;
       start_pass_dl <= 1'b0;
       load_kernel <= 1'b0;
       load_column <= 1'b0;
@@ -142,8 +140,6 @@ module control_unit #(
 
         LOAD_DATA_TO_SRAM:
         begin
-          start_loading_data_to_sram <= 1'b1;
-
           if (done_loading_data_to_sram)
           begin
             state <= LOAD_K_TO_SA;
@@ -185,7 +181,7 @@ module control_unit #(
           end
 
           if (sa_input_rows_counter != 0) begin
-              load_column <= 1'b0;
+              // load_column <= 1'b0;
           end
 
           if (sa_input_rows_counter >= (cfg_N - (cfg_K - current_kernel_height)))
@@ -201,7 +197,7 @@ module control_unit #(
           end
 
           // handle systolic data valid signal
-          if (sa_input_rows_counter >= SA_INPUT_FILL_TIME)
+          if (sa_input_rows_counter >= (current_kernel_height - 2) && dl_output_data_valid)
           begin
             systolic_data_valid <= 1'b1;
             sa_output_rows_counter <= 8'd0;
@@ -212,7 +208,7 @@ module control_unit #(
             sa_output_rows_counter <= sa_output_rows_counter + 1;
           end
 
-          if(sa_output_rows_counter >= result_size)
+          if(sa_output_rows_counter >= (result_size - 1))
           begin
             systolic_data_valid <= 1'b0;
             sa_output_rows_counter <= 8'd0;
@@ -262,6 +258,7 @@ module control_unit #(
 
 
   assign done = (state == DONE_STATE);
+  assign start_loading_data_to_sram = (state == LOAD_DATA_TO_SRAM);
 
 
 endmodule

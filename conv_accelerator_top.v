@@ -256,7 +256,7 @@ module conv_accelerator_top #(
   
   // assign sa_out_valid = sa_valid_pipe[SA_INPUT_FILL_TIME+SA_DIM-1];
   assign sa_out_valid = 1'b0;
-  assign sa_out_data = sa_result[7:0]; // Take lower 8 bits
+  assign sa_out_data = (sa_result > 32'hFF) ? 32'hFF : sa_result[7:0]; // Take lower 8 bits
 
   // ============================================
   // Writeback (SA -> SRAM1)
@@ -268,7 +268,7 @@ module conv_accelerator_top #(
     .rst_n(rst_n),
     .cfg_start_pass(cu_start_pass),
     .cfg_ker_idx(cu_kernel_idx),
-    .sa_valid(sa_out_valid & cu_systolic_valid),
+    .sa_valid(sa_out_valid || cu_systolic_valid),
     .sa_wdata(sa_out_data),
     .busy(sa_wb_busy),
     .sram_en(sram1_p0_en),
