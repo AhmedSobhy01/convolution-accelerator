@@ -32,8 +32,7 @@ At the systolic array level:
 
 This dataflow **removes the need for input/output FIFOs**, while enabling **early and uniform PE activation** across the array.
 
-<img width="1158" height="548" alt="Pasted image" src="https://github.com/user-attachments/assets/ef703bd8-c83d-44a5-8fa9-c1b22b9e5de5" />
-
+<img width="972" height="376" alt="Pasted image" src="https://github.com/user-attachments/assets/798fa56d-7a0f-4b5c-ae92-7fe7019e6397" />
 
 ## Constraints on Input
 As implied in the implementation description, a preprocessing of shifting and rotating each column of the kernel is needed.
