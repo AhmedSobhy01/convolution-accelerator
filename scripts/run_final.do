@@ -6,6 +6,8 @@
 # ------------------------------------------------------------------------------
 vlib work
 vmap work work
+vlog -work work control_unit/control_unit.v
+
 vlog data-loader-agu/src/*.v
 vlog -work work tb/tb_conv_accelerator.v
 vlog -work work conv_accelerator_top.v
@@ -46,6 +48,36 @@ add wave -noupdate -group "Controls" -color "Magenta" /tb_conv_accelerator/start
 add wave -noupdate -group "Controls" -color "Green"   /tb_conv_accelerator/window_done
 add wave -noupdate -group "Controls" -color "Magenta" /tb_conv_accelerator/start_drain
 add wave -noupdate -group "Controls" -color "Green"   /tb_conv_accelerator/drain_done
+
+# ------------------------------------------------------------------------------
+# GROUP: CONTROL UNIT
+# ------------------------------------------------------------------------------
+add wave -noupdate -divider "CONTROL UNIT"
+
+# Control Unit State & Counters
+add wave -noupdate -group "Control Unit" -color "Yellow"                 /tb_conv_accelerator/dut/u_control/state
+add wave -noupdate -group "Control Unit" -color "Cyan"   -radix unsigned /tb_conv_accelerator/dut/u_control/sa_input_rows_counter
+add wave -noupdate -group "Control Unit" -color "Cyan"   -radix unsigned /tb_conv_accelerator/dut/u_control/sa_output_rows_counter
+add wave -noupdate -group "Control Unit" -color "Cyan"   -radix unsigned /tb_conv_accelerator/dut/u_control/sa_cols_counter
+add wave -noupdate -group "Control Unit" -color "White"  -radix unsigned /tb_conv_accelerator/dut/u_control/kernel_index
+add wave -noupdate -group "Control Unit" -color "White"  -radix unsigned /tb_conv_accelerator/dut/u_control/total_kernel_parts
+add wave -noupdate -group "Control Unit" -color "White"  -radix unsigned /tb_conv_accelerator/dut/u_control/max_columns
+add wave -noupdate -group "Control Unit" -color "White"  -radix unsigned /tb_conv_accelerator/dut/u_control/current_kernel_width
+add wave -noupdate -group "Control Unit" -color "White"  -radix unsigned /tb_conv_accelerator/dut/u_control/current_kernel_height
+
+# Control Unit Output Signals
+add wave -noupdate -group "Control Unit" -color "Magenta"                /tb_conv_accelerator/dut/u_control/start_loading_data_to_sram
+add wave -noupdate -group "Control Unit" -color "Green"                  /tb_conv_accelerator/dut/u_control/done_loading_data_to_sram
+add wave -noupdate -group "Control Unit" -color "Magenta"                /tb_conv_accelerator/dut/u_control/start_pass_dl
+add wave -noupdate -group "Control Unit" -color "Magenta"                /tb_conv_accelerator/dut/u_control/load_kernel
+add wave -noupdate -group "Control Unit" -color "Green"                  /tb_conv_accelerator/dut/u_control/done_loading_kernel_to_sa
+add wave -noupdate -group "Control Unit" -color "Magenta"                /tb_conv_accelerator/dut/u_control/load_column
+add wave -noupdate -group "Control Unit" -color "Cyan"   -radix unsigned /tb_conv_accelerator/dut/u_control/load_column_index
+add wave -noupdate -group "Control Unit" -color "Green"                  /tb_conv_accelerator/dut/u_control/done_loading_column_to_sa
+add wave -noupdate -group "Control Unit" -color "Orange"                 /tb_conv_accelerator/dut/u_control/dl_output_data_valid
+add wave -noupdate -group "Control Unit" -color "Orange"                 /tb_conv_accelerator/dut/u_control/systolic_data_valid
+add wave -noupdate -group "Control Unit" -color "Magenta"                /tb_conv_accelerator/dut/u_control/start_sending_output_to_dram
+add wave -noupdate -group "Control Unit" -color "Green"                  /tb_conv_accelerator/dut/u_control/done_sending_output_to_dram
 
 # ------------------------------------------------------------------------------
 # GROUP: EXTERNAL INTERFACES

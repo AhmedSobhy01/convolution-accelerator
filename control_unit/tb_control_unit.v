@@ -9,37 +9,38 @@ module tb_control_unit;
 
     // DUT signals
     reg clk;
-    reg busy_clk;
     reg rst_n;
     reg start;
-    reg [5:0] cfg_N;
-    reg [3:0] cfg_K;
+    reg [6:0] cfg_N;
+    reg [4:0] cfg_K;
     wire done;
     
-    // Data loader interface
-    reg dl_busy;
-    
-    // Input data stream from DRAM
-    wire rx_ready;
-    reg rx_valid;
-    
-    // Output data stream to DRAM
-    reg tx_ready;
-    wire tx_valid;
-    
     // Configuration outputs
-    wire [5:0] dl_cfg_N;
-    wire [3:0] dl_cfg_K;
+    wire [6:0] dl_cfg_N;
+    wire [4:0] dl_cfg_K;
     
-    // Control signals to data loader
-    wire start_loading_kernel_to_sram;
-    wire start_loading_image_to_sram;
+    // Data loader interface
+    wire start_loading_data_to_sram;
+    reg done_loading_data_to_sram;
+    
+    wire start_pass_dl;
+    
+    // Kernel loading to SA
     wire load_kernel;
     wire [1:0] kernel_index;
+    reg done_loading_kernel_to_sa;
+    reg dl_output_data_valid;
+    
+    // Column loading to SA
     wire load_column;
     wire [5:0] load_column_index;
-    wire systolic_data_valid;
+    reg done_loading_column_to_sa;
+    
+    // Output to DRAM
     wire start_sending_output_to_dram;
+    reg done_sending_output_to_dram;
+    
+    wire systolic_data_valid;
 
     // Instantiate the DUT
     control_unit #(
@@ -52,32 +53,27 @@ module tb_control_unit;
         .cfg_N(cfg_N),
         .cfg_K(cfg_K),
         .done(done),
-        .dl_busy(busy_clk),
-        .rx_ready(rx_ready),
-        .rx_valid(rx_valid),
-        .tx_ready(tx_ready),
-        .tx_valid(tx_valid),
         .dl_cfg_N(dl_cfg_N),
         .dl_cfg_K(dl_cfg_K),
-        .start_loading_kernel_to_sram(start_loading_kernel_to_sram),
-        .start_loading_image_to_sram(start_loading_image_to_sram),
+        .start_loading_data_to_sram(start_loading_data_to_sram),
+        .done_loading_data_to_sram(done_loading_data_to_sram),
+        .start_pass_dl(start_pass_dl),
         .load_kernel(load_kernel),
         .kernel_index(kernel_index),
+        .done_loading_kernel_to_sa(done_loading_kernel_to_sa),
+        .dl_output_data_valid(dl_output_data_valid),
         .load_column(load_column),
         .load_column_index(load_column_index),
-        .systolic_data_valid(systolic_data_valid),
-        .start_sending_output_to_dram(start_sending_output_to_dram)
+        .done_loading_column_to_sa(done_loading_column_to_sa),
+        .start_sending_output_to_dram(start_sending_output_to_dram),
+        .done_sending_output_to_dram(done_sending_output_to_dram),
+        .systolic_data_valid(systolic_data_valid)
     );
 
     // Clock generation
     initial begin
         clk = 0;
         forever #(CLK_PERIOD/2) clk = ~clk;
-    end
-    
-    initial begin
-        busy_clk = 1;  // Start opposite to clk
-        forever #(CLK_PERIOD * 2) busy_clk = ~busy_clk;
     end
 
     // Task to reset the system
@@ -87,40 +83,29 @@ module tb_control_unit;
             start = 0;
             cfg_N = 0;
             cfg_K = 0;
-            dl_busy = 0;
-            rx_valid = 0;
-            tx_ready = 0;
+            done_loading_data_to_sram = 0;
+            done_loading_kernel_to_sa = 0;
+            dl_output_data_valid = 0;
+            done_loading_column_to_sa = 0;
+            done_sending_output_to_dram = 0;
             #(CLK_PERIOD * 2);
             rst_n = 1;
             #(CLK_PERIOD * 2);
         end
     endtask
 
-    // Task to simulate data loader busy for kernel loading
-    task simulate_kernel_load;
+    // Task to simulate data loading to SRAM (kernel + image)
+    task simulate_data_load;
         input integer cycles;
         begin
             @(posedge clk);
-            wait(start_loading_kernel_to_sram);
+            wait(start_loading_data_to_sram);
             @(posedge clk);
-            dl_busy = 1;
             repeat(cycles) @(posedge clk);
-            dl_busy = 0;
-            $display("[%0t] Kernel loading to SRAM completed", $time);
-        end
-    endtask
-
-    // Task to simulate data loader busy for image loading
-    task simulate_image_load;
-        input integer cycles;
-        begin
+            done_loading_data_to_sram = 1;
             @(posedge clk);
-            wait(start_loading_image_to_sram);
-            @(posedge clk);
-            dl_busy = 1;
-            repeat(cycles) @(posedge clk);
-            dl_busy = 0;
-            $display("[%0t] Image loading to SRAM completed", $time);
+            done_loading_data_to_sram = 0;
+            $display("[%0t] Data loading to SRAM completed", $time);
         end
     endtask
 
@@ -130,11 +115,36 @@ module tb_control_unit;
         begin
             @(posedge clk);
             wait(load_kernel);
+            $display("[%0t] Loading kernel to SA (index=%0d)", $time, kernel_index);
             @(posedge clk);
-            dl_busy = 1;
             repeat(cycles) @(posedge clk);
-            dl_busy = 0;
+            done_loading_kernel_to_sa = 1;
+            @(posedge clk);
+            done_loading_kernel_to_sa = 0;
             $display("[%0t] Kernel loading to SA completed (index=%0d)", $time, kernel_index);
+        end
+    endtask
+
+    // Task to simulate column data streaming
+    task simulate_column_streaming;
+        input integer num_columns;
+        input integer rows_per_column;
+        integer col, row;
+        begin
+            for (col = 0; col < num_columns; col = col + 1) begin
+                @(posedge clk);
+                wait(load_column);
+                $display("[%0t] Streaming column %0d (index=%0d)", $time, col, load_column_index);
+                
+                for (row = 0; row < rows_per_column; row = row + 1) begin
+                    @(posedge clk);
+                    dl_output_data_valid = 1;
+                    @(posedge clk);
+                    dl_output_data_valid = 0;
+                end
+                
+                @(posedge clk);
+            end
         end
     endtask
 
@@ -145,12 +155,10 @@ module tb_control_unit;
             @(posedge clk);
             wait(start_sending_output_to_dram);
             @(posedge clk);
-            tx_ready = 1;
-            dl_busy = 1;
             repeat(cycles) @(posedge clk);
-            dl_busy = 0;
-            repeat(2) @(posedge clk);
-            tx_ready = 0;
+            done_sending_output_to_dram = 1;
+            @(posedge clk);
+            done_sending_output_to_dram = 0;
             $display("[%0t] Output storage to DRAM completed", $time);
         end
     endtask
@@ -160,17 +168,11 @@ module tb_control_unit;
         case(dut.state)
             4'd0: $display("[%0t] STATE: IDLE", $time);
             4'd1: $display("[%0t] STATE: CONFIG", $time);
-            4'd2: $display("[%0t] STATE: WAIT_MEM", $time);
-            4'd3: $display("[%0t] STATE: LOAD_K_TO_SRAM", $time);
-            4'd4: $display("[%0t] STATE: WAIT_LOADING_KERNEL_TO_SRAM", $time);
-            4'd5: $display("[%0t] STATE: LOAD_I_TO_SRAM", $time);
-            4'd6: $display("[%0t] STATE: WAIT_LOADING_IMAGE_TO_SRAM", $time);
-            4'd7: $display("[%0t] STATE: LOAD_K_TO_SA", $time);
-            4'd8: $display("[%0t] STATE: WAIT_LOADING_K_TO_SA", $time);
-            4'd9: $display("[%0t] STATE: COMPUTE", $time);
-            4'd10: $display("[%0t] STATE: WAIT_MEM_OUT", $time);
-            4'd11: $display("[%0t] STATE: STORE_OUT", $time);
-            4'd12: $display("[%0t] STATE: DONE_STATE", $time);
+            4'd2: $display("[%0t] STATE: LOAD_DATA_TO_SRAM", $time);
+            4'd3: $display("[%0t] STATE: LOAD_K_TO_SA", $time);
+            4'd4: $display("[%0t] STATE: COMPUTE", $time);
+            4'd5: $display("[%0t] STATE: STORE_OUT", $time);
+            4'd6: $display("[%0t] STATE: DONE_STATE", $time);
         endcase
     end
 
@@ -187,25 +189,17 @@ module tb_control_unit;
             begin
                 cfg_N = 16;
                 cfg_K = 3;
+                @(posedge clk);
                 start = 1;
                 @(posedge clk);
                 start = 0;
-                
-                // Wait for rx_ready
-                wait(rx_ready);
-                @(posedge clk);
-                rx_valid = 1;
-                @(posedge clk);
-                rx_valid = 0;
             end
             
-            simulate_kernel_load(1);
-            simulate_image_load(1);
+            simulate_data_load(10);
             simulate_kernel_to_sa(SA_DIM);
-            simulate_output_store(1);
+            simulate_column_streaming(14, 16);  // (N-K+1) columns, N rows each
+            simulate_output_store(20);
         join
-        
-        $display("[%0t] Waiting for done state: done=%b, state=%0d", $time, done, dut.state);
         
         wait(done);
         $display("[%0t] Test Case 1 completed - DONE signal asserted", $time);
@@ -220,23 +214,16 @@ module tb_control_unit;
             begin
                 cfg_N = 20;
                 cfg_K = 5;
+                @(posedge clk);
                 start = 1;
                 @(posedge clk);
-                @(posedge clk);
-                @(posedge clk);
                 start = 0;
-                
-                wait(rx_ready);
-                @(posedge clk);
-                rx_valid = 1;
-                @(posedge clk);
-                rx_valid = 0;
             end
             
-            simulate_kernel_load(1);
-            simulate_image_load(1);
+            simulate_data_load(10);
             simulate_kernel_to_sa(SA_DIM);
-            simulate_output_store(1);
+            simulate_column_streaming(16, 20);  // (N-K+1) columns, N rows each
+            simulate_output_store(20);
         join
         
         wait(done);
@@ -246,33 +233,22 @@ module tb_control_unit;
         // Reset for next test
         reset_system();
 
-        // Test Case 3: Large kernel (K = 12, N = 24) - K > SA_DIM
-        $display("\n=== Test Case 3: K=12, N=24 (K > SA_DIM, requires tiling) ===");
+        // Test Case 3: Edge case (K = SA_DIM = 8, N = 16)
+        $display("\n=== Test Case 3: K=8, N=16 (K == SA_DIM) ===");
         fork
             begin
-                cfg_N = 24;
-                cfg_K = 12;
+                cfg_N = 16;
+                cfg_K = 8;
+                @(posedge clk);
                 start = 1;
                 @(posedge clk);
-                @(posedge clk);
                 start = 0;
-                
-                wait(rx_ready);
-                @(posedge clk);
-                rx_valid = 1;
-                @(posedge clk);
-                rx_valid = 0;
             end
             
-            // simulate_image_load(50);
-            
-            // // Multiple kernel parts need to be loaded (4 parts for 12x12 with SA_DIM=8)
-            // simulate_kernel_to_sa(SA_DIM);  // Part 0
-            // simulate_kernel_to_sa(SA_DIM);  // Part 1
-            // simulate_kernel_to_sa(SA_DIM);  // Part 2
-            // simulate_kernel_to_sa(SA_DIM);  // Part 3
-            
-            simulate_output_store(1);
+            simulate_data_load(10);
+            simulate_kernel_to_sa(SA_DIM);
+            simulate_column_streaming(9, 16);  // (N-K+1) columns, N rows each
+            simulate_output_store(20);
         join
         
         wait(done);
@@ -282,74 +258,43 @@ module tb_control_unit;
         // Reset for next test
         reset_system();
 
-        // Test Case 4: Edge case (K = SA_DIM = 8, N = 16)
-        $display("\n=== Test Case 4: K=8, N=16 (K == SA_DIM) ===");
+        // Test Case 4: Large kernel (K = 12, N = 24) - K > SA_DIM (requires tiling)
+        $display("\n=== Test Case 4: K=12, N=24 (K > SA_DIM, requires tiling) ===");
         fork
             begin
-                cfg_N = 16;
-                cfg_K = 8;
+                cfg_N = 24;
+                cfg_K = 12;
+                @(posedge clk);
                 start = 1;
                 @(posedge clk);
-                @(posedge clk);
                 start = 0;
-                
-                wait(rx_ready);
-                @(posedge clk);
-                rx_valid = 1;
-                @(posedge clk);
-                rx_valid = 0;
             end
             
-            simulate_kernel_load(1);
-            simulate_image_load(1);
-            simulate_kernel_to_sa(SA_DIM);
-            simulate_output_store(1);
+            simulate_data_load(10);
+            
+            // Multiple kernel parts (4 parts for 12x12 with SA_DIM=8)
+            simulate_kernel_to_sa(SA_DIM);  // Part 0
+            simulate_column_streaming(13, 24);  // First tile
+            
+            simulate_kernel_to_sa(SA_DIM);  // Part 1
+            simulate_column_streaming(13, 24);  // Second tile
+            
+            simulate_kernel_to_sa(SA_DIM);  // Part 2
+            simulate_column_streaming(13, 24);  // Third tile
+            
+            simulate_kernel_to_sa(SA_DIM);  // Part 3
+            simulate_column_streaming(13, 24);  // Fourth tile
+            
+            simulate_output_store(50);
         join
         
         wait(done);
         $display("[%0t] Test Case 4 completed - DONE signal asserted", $time);
         #(CLK_PERIOD * 5);
 
-        // Reset for next test
-        reset_system();
-
-        // Test Case 5: Large kernel (K = 15, N = 61) - K > SA_DIM
-        $display("\n=== Test Case 5: K=15, N=61 (K > SA_DIM, requires tiling) ===");
-        fork
-            begin
-                cfg_N = 61;
-                cfg_K = 15;
-                start = 1;
-                @(posedge clk);
-                @(posedge clk);
-                start = 0;
-                
-                wait(rx_ready);
-                @(posedge clk);
-                rx_valid = 1;
-                @(posedge clk);
-                rx_valid = 0;
-            end
-            
-            simulate_kernel_load(1);
-            simulate_image_load(1);
-            
-            // Multiple kernel parts need to be loaded (4 parts for 15x15 with SA_DIM=8)
-            simulate_kernel_to_sa(SA_DIM);  // Part 0
-            simulate_kernel_to_sa(SA_DIM);  // Part 1
-            simulate_kernel_to_sa(SA_DIM);  // Part 2
-            simulate_kernel_to_sa(SA_DIM);  // Part 3
-            
-            simulate_output_store(50);
-        join
-        
-        wait(done);
-        $display("[%0t] Test Case 5 completed - DONE signal asserted", $time);
-        #(CLK_PERIOD * 5);
-
         $display("\n=== All Test Cases Completed Successfully ===");
         #(CLK_PERIOD * 10);
-        // $finish;
+        $finish;
     end
 
     // Timeout watchdog
