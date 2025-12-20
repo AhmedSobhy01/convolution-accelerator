@@ -23,7 +23,7 @@ module conv_accelerator_top #(
   input  wire [7:0]  rx_data,
   input  wire         rx_valid,
   output wire         rx_ready,
-  
+
   // DRAM output stream (32-bit) <- SRAM1
   output wire         tx_valid,
   output wire [31:0]  tx_data,
@@ -36,7 +36,7 @@ module conv_accelerator_top #(
   wire [63:0]  w_data;         // kernel column vector
   wire         p_valid;        // pixel data valid
   wire [63:0]  p_data;         // pixel row vector
-  
+
   // Inputs FROM SA (Results)
   wire         sa_out_valid;
   wire [7:0]   sa_out_data;
@@ -230,7 +230,7 @@ module conv_accelerator_top #(
     p_data_delayed <= p_data;
     w_data_delayed <= w_data;
   end
-  
+
   systolic_array #(
     .DATA_WIDTH(32),
     .ARRAY_SIZE(SA_DIM),
@@ -253,9 +253,7 @@ module conv_accelerator_top #(
     else
       sa_valid_pipe <= {sa_valid_pipe[SA_INPUT_FILL_TIME+SA_DIM-2:0], (p_valid & w_valid)};
   end
-  
-  // assign sa_out_valid = sa_valid_pipe[SA_INPUT_FILL_TIME+SA_DIM-1];
-  assign sa_out_valid = 1'b0;
+
   assign sa_out_data = (sa_result > 32'hFF) ? 32'hFF : sa_result[7:0]; // Take lower 8 bits
 
   // ============================================
@@ -268,7 +266,7 @@ module conv_accelerator_top #(
     .rst_n(rst_n),
     .cfg_start_pass(cu_start_pass),
     .cfg_ker_idx(cu_kernel_idx),
-    .sa_valid(sa_out_valid || cu_systolic_valid),
+    .sa_valid(cu_systolic_valid),
     .sa_wdata(sa_out_data),
     .busy(sa_wb_busy),
     .sram_en(sram1_p0_en),
