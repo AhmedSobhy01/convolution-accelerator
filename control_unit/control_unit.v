@@ -42,8 +42,7 @@ module control_unit #(
     WAIT_LOAD_K_TO_SA  = 4'd4,
     COMPUTE            = 4'd5,
     STORE_OUT          = 4'd6,
-    WAIT_STORE_OUT     = 4'd7,
-    DONE_STATE         = 4'd8;
+    DONE_STATE         = 4'd7;
 
   reg [3:0] state;
 
@@ -150,16 +149,13 @@ module control_unit #(
         LOAD_K_TO_SA:
         begin
           load_kernel <= 1'b1;
-          start_pass_dl <= 1;
-
+          start_pass_dl <= 1'b1;
           state <= WAIT_LOAD_K_TO_SA;
         end
 
         WAIT_LOAD_K_TO_SA:
         begin
-          load_kernel <= 1'b0;
-          start_pass_dl <= 0;
-
+          // Check immediately for done - removes 1 idle cycle
           if (done_loading_kernel_to_sa)
           begin
             sa_input_rows_counter <= 8'd0;
@@ -232,12 +228,6 @@ module control_unit #(
         STORE_OUT:
         begin
           start_sending_output_to_dram <= 1'b1;
-
-          state <= WAIT_STORE_OUT;
-        end
-        WAIT_STORE_OUT:
-        begin
-          start_sending_output_to_dram <= 1'b0;
 
           if (done_sending_output_to_dram)
           begin

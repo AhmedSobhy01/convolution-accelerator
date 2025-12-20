@@ -24,31 +24,38 @@ module dl_drain_stream #(
   input  wire               tx_ready
 );
 
-  // Simplified States for byte-by-byte streaming
-  // Timing:
-  // T0: ST_READ (Request pixel from SRAM)
-  // T1: ST_WAIT (Wait for SRAM 2-cycle latency)
-  // T2: ST_SEND (Data valid, send to DRAM)
-  localparam ST_IDLE = 2'd0;
-  localparam ST_READ = 2'd1;
-  localparam ST_WAIT = 2'd2;
-  localparam ST_SEND = 2'd3;
+  localparam ST_IDLE   = 2'd0;
+  localparam ST_RUN    = 2'd1;  // Active draining
+  localparam ST_DONE   = 2'd2;  // Signal done
 
   reg [1:0] state;
-  reg [ADDR_W-1:0] pixel_cnt;
+
+  // Read tracking
+  reg [ADDR_W-1:0] read_cnt;     // Number of reads issued
+  reg [ADDR_W-1:0] tx_cnt;       // Pixels transmitted
 
   // Row-major to column-major address conversion
-  reg [6:0] row_cnt;  // Current row (0 to output_dim-1)
-  reg [6:0] col_cnt;  // Current column (0 to output_dim-1)
+  reg [6:0] read_row, read_col;
 
-  wire [ADDR_W-1:0] sram_addr_calc = col_cnt * cfg_output_dim + row_cnt;
+  // 2-stage pipeline to track data validity (matches SRAM latency)
+  reg [1:0] valid_sr;  // Shift register: valid_sr[1] = data ready now
+
+  // Address calculation (column-major order)
+  wire [ADDR_W-1:0] sram_addr_calc = read_col * cfg_output_dim + read_row;
+
+  // Can we issue more reads?
+  wire can_read = (read_cnt < cfg_num_pixels);
+
+  // Is data available at output?
+  wire data_ready = valid_sr[1];
+
+  // Are we done?
+  wire all_done = (tx_cnt >= cfg_num_pixels) && !valid_sr[1] && !valid_sr[0];
 
   // Summation Logic (Combinational)
   reg [7:0] computed_pixel;
   reg [9:0] sum_temp;
 
-  // CHANGED: Use Combinational Logic here.
-  // sram_rdata is already registered inside the SRAM.
   always @(*) begin
     if (cfg_split_mode) begin
       sum_temp = sram_rdata[7:0] + sram_rdata[15:8] + sram_rdata[23:16] + sram_rdata[31:24];
@@ -63,77 +70,87 @@ module dl_drain_stream #(
       state      <= ST_IDLE;
       sram_en    <= 1'b0;
       sram_addr  <= {ADDR_W{1'b0}};
-      pixel_cnt  <= {ADDR_W{1'b0}};
-      row_cnt    <= 7'd0;
-      col_cnt    <= 7'd0;
+      read_cnt   <= {ADDR_W{1'b0}};
+      read_row   <= 7'd0;
+      read_col   <= 7'd0;
       tx_valid   <= 1'b0;
       tx_data    <= 8'd0;
+      tx_cnt     <= {ADDR_W{1'b0}};
       done       <= 1'b0;
+      valid_sr   <= 2'b00;
     end else begin
-      // Defaults
-      sram_en  <= 1'b0;
-      done     <= 1'b0;
+      done <= 1'b0;
 
       case (state)
         ST_IDLE: begin
-          pixel_cnt <= {ADDR_W{1'b0}};
-          row_cnt   <= 7'd0;
-          col_cnt   <= 7'd0;
-          tx_valid  <= 1'b0;
-          if (start) state <= ST_READ;
+          read_cnt   <= {ADDR_W{1'b0}};
+          read_row   <= 7'd0;
+          read_col   <= 7'd0;
+          tx_cnt     <= {ADDR_W{1'b0}};
+          tx_valid   <= 1'b0;
+          valid_sr   <= 2'b00;
+          sram_en    <= 1'b0;
+
+          if (start) begin
+            state <= ST_RUN;
+          end
         end
 
-        ST_READ: begin
-          // Check if all pixels have been processed
-          if (pixel_cnt >= cfg_num_pixels) begin
-            done  <= 1'b1;
-            state <= ST_IDLE;
-          end else begin
-            // Request pixel from SRAM
+        ST_RUN: begin
+          sram_en <= 1'b0;  // Will be set below if we issue a read
+
+          // Shift the valid pipeline every cycle
+          valid_sr <= {valid_sr[0], 1'b0};
+
+          // Issue read if: we have pixels left AND (no backpressure OR pipeline not full)
+          // We issue a read when the TX side can accept or we're filling the pipeline
+          if (can_read && (!tx_valid || tx_ready || !valid_sr[1])) begin
             sram_en   <= 1'b1;
             sram_addr <= sram_addr_calc;
-            pixel_cnt <= pixel_cnt + 1'b1;
-            
-            // Update row/col counters for column-major addressing
-            if (col_cnt + 1'b1 >= cfg_output_dim) begin
-              col_cnt <= 7'd0;
-              row_cnt <= row_cnt + 1'b1;
+            read_cnt  <= read_cnt + 1'b1;
+
+            // Advance row/col pointers
+            if (read_col + 1'b1 >= cfg_output_dim) begin
+              read_col <= 7'd0;
+              read_row <= read_row + 1'b1;
             end else begin
-              col_cnt <= col_cnt + 1'b1;
+              read_col <= read_col + 1'b1;
             end
-            
-            state <= ST_WAIT;
+
+            // Push 1 into pipeline
+            valid_sr <= {valid_sr[0], 1'b1};
           end
-        end
 
-        ST_WAIT: begin
-          // Wait one cycle for SRAM 2-cycle latency
-          // (First cycle was ST_READ, second cycle is ST_WAIT, data ready in ST_SEND)
-          state <= ST_SEND;
-        end
-
-        ST_SEND: begin
-          // Data is now valid from SRAM, computed_pixel has the result
-          if (!tx_valid) begin
-            // Drive output with computed pixel
-            tx_data  <= computed_pixel;
-            tx_valid <= 1'b1;
+          // TX side: output when data is ready
+          if (data_ready) begin
+            if (!tx_valid || tx_ready) begin
+              tx_data  <= computed_pixel;
+              tx_valid <= 1'b1;
+              tx_cnt   <= tx_cnt + 1'b1;
+            end
           end else begin
-            // Wait for handshake
             if (tx_ready) begin
               tx_valid <= 1'b0;
-              state    <= ST_READ;
             end
           end
+
+          if (all_done) begin
+            state <= ST_DONE;
+          end
+        end
+
+        ST_DONE: begin
+          tx_valid <= 1'b0;
+          sram_en  <= 1'b0;
+          done     <= 1'b1;
+          state    <= ST_IDLE;
         end
 
         default: begin
           state <= ST_IDLE;
         end
-
       endcase
     end
   end
-
 
 endmodule
