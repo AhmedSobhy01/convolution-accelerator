@@ -6,32 +6,18 @@ module conv_accelerator_top #(
   parameter BYTE_ADDR_W = 13,         // Byte address width (8KB)
   parameter KER_BASE_BYTE = 16'd4096,
   parameter IMG_BASE_BYTE = 16'd0,
-  parameter SRAM1_ADDR_W  = 12        // SRAM1 word address width (4096 words)
+  parameter SRAM1_ADDR_W  = 12,       // SRAM1 word address width (4096 words)
+  parameter SA_DIM = 8,               // Systolic array dimension
+  parameter SA_INPUT_FILL_TIME = 8    // SA fill time
 )(
   input  wire         clk,
   input  wire         rst_n,
 
-  // Configuration
-  input  wire [6:0]   cfg_N,          // image size
-  input  wire [4:0]   cfg_K,          // kernel size
-  input  wire         cfg_start_pass, // Reset Writeback pointers for new pass
-  input  wire [1:0]   cfg_ker_idx,    // Quadrant index for writeback
-  input  wire         cfg_split_mode, // 0=Single, 1=Split mode for drain
-
-  // Control interface
-  input  wire         start_load,     // start DMA load of image+kernel
-  output wire         load_done,      // DMA load complete
-  
-  input  wire         start_kernel_load,   // start streaming kernel to SA
-  input  wire [1:0]   kernel_idx,         // kernel quadrant index
-  output wire         kernel_done,         // kernel load complete
-  
-  input  wire         start_window,   // start streaming image window
-  input  wire [15:0]  window_col,     // starting column for window
-  output wire         window_done,    // window streaming complete
-
-  input  wire         start_drain,    // Start draining SRAM1 to DRAM
-  output wire         drain_done,     // Drain complete
+  // High-level control interface
+  input  wire         start,          // Start convolution operation
+  input  wire [6:0]   cfg_N,          // Image size (control unit)
+  input  wire [4:0]   cfg_K,          // Kernel size (control unit)
+  output wire         done,           // Operation complete
 
   // DRAM input stream (32-bit) -> SRAM0
   input  wire [31:0]  rx_data,
@@ -41,20 +27,20 @@ module conv_accelerator_top #(
   // DRAM output stream (32-bit) <- SRAM1
   output wire         tx_valid,
   output wire [31:0]  tx_data,
-  input  wire         tx_ready,
+  input  wire         tx_ready
+);
 
   // Systolic Array Interface
   // Outputs TO SA
-  output wire         w_valid,        // kernel/weight data valid
-  output wire [63:0]  w_data,         // kernel column vector
-  output wire         p_valid,        // pixel data valid
-  output wire [63:0]  p_data,         // pixel row vector
+  wire         w_valid;        // kernel/weight data valid
+  wire [63:0]  w_data;         // kernel column vector
+  wire         p_valid;        // pixel data valid
+  wire [63:0]  p_data;         // pixel row vector
   
   // Inputs FROM SA (Results)
-  input  wire         sa_out_valid,
-  input  wire [7:0]   sa_out_data,
-  output wire         sa_wb_busy      // Writeback buffer full
-);
+  wire         sa_out_valid;
+  wire [7:0]   sa_out_data;
+  wire         sa_wb_busy;     // Writeback buffer full
 
   // ============================================
   // Power Pins
@@ -63,6 +49,23 @@ module conv_accelerator_top #(
     supply1 vccd1;
     supply0 vssd1;
   `endif
+
+  // ============================================
+  // Control Unit Signals
+  // ============================================
+  wire [6:0]   cu_cfg_N;
+  wire [4:0]   cu_cfg_K;
+  wire         cu_start_load;
+  wire         cu_load_done;
+  wire         cu_start_pass;
+  wire         cu_load_kernel;
+  wire [1:0]   cu_kernel_idx;
+  wire         cu_kernel_done;
+  wire         cu_load_column;
+  wire [15:0]   cu_column_idx;
+  wire         cu_start_drain;
+  wire         cu_drain_done;
+  wire         cu_systolic_valid;
 
   // ============================================
   // SRAM0 Signals (Input Buffer)
@@ -93,6 +96,36 @@ module conv_accelerator_top #(
   wire [31:0]  sram1_p1_rdata;
 
   // ============================================
+  // Control Unit
+  // ============================================
+  control_unit #(
+    .SA_DIM(SA_DIM),
+    .SA_INPUT_FILL_TIME(SA_INPUT_FILL_TIME)
+  ) u_control (
+    .clk(clk),
+    .rst_n(rst_n),
+    .start(start),
+    .cfg_N(cfg_N),
+    .cfg_K(cfg_K),
+    .done(done),
+    .dl_cfg_N(cu_cfg_N),
+    .dl_cfg_K(cu_cfg_K),
+    .start_loading_data_to_sram(cu_start_load),
+    .done_loading_data_to_sram(cu_load_done),
+    .start_pass_dl(cu_start_pass),
+    .load_kernel(cu_load_kernel),
+    .kernel_index(cu_kernel_idx),
+    .done_loading_kernel_to_sa(cu_kernel_done),
+    .dl_output_data_valid(p_valid),
+    .load_column(cu_load_column),
+    .load_column_index(cu_column_idx),
+    .done_loading_column_to_sa(window_done),
+    .start_sending_output_to_dram(cu_start_drain),
+    .done_sending_output_to_dram(cu_drain_done),
+    .systolic_data_valid(cu_systolic_valid)
+  );
+
+  // ============================================
   // DMA Loader (writes to SRAM0)
   // ============================================
   wire         dma_sram_en;
@@ -107,10 +140,10 @@ module conv_accelerator_top #(
   ) u_dma (
     .clk(clk),
     .rst_n(rst_n),
-    .start(start_load),
-    .cfg_N(cfg_N),
-    .cfg_K(cfg_K),
-    .done(load_done),
+    .start(cu_start_load),
+    .cfg_N(cu_cfg_N),
+    .cfg_K(cu_cfg_K),
+    .done(cu_load_done),
     .rx_data(rx_data),
     .rx_valid(rx_valid),
     .rx_ready(rx_ready),
@@ -165,13 +198,13 @@ module conv_accelerator_top #(
   ) u_streamer (
     .clk(clk),
     .rst_n(rst_n),
-    .cfg_N(cfg_N),
-    .cfg_K(cfg_K),
-    .start_load_kernel(start_kernel_load),
-    .kernel_idx(kernel_idx),
-    .kernel_done(kernel_done),
-    .start_stream_window(start_window),
-    .window_col(window_col),
+    .cfg_N(cu_cfg_N),
+    .cfg_K(cu_cfg_K),
+    .start_load_kernel(cu_load_kernel),
+    .kernel_idx(cu_kernel_idx),
+    .kernel_done(cu_kernel_done),
+    .start_stream_window(cu_load_column),
+    .window_col(cu_column_idx),
     .window_done(window_done),
     .w_valid(w_valid),
     .w_data(w_data),
@@ -193,9 +226,9 @@ module conv_accelerator_top #(
   ) u_writeback (
     .clk(clk),
     .rst_n(rst_n),
-    .cfg_start_pass(cfg_start_pass),
-    .cfg_ker_idx(cfg_ker_idx),
-    .sa_valid(sa_out_valid),
+    .cfg_start_pass(cu_start_pass),
+    .cfg_ker_idx(cu_kernel_idx),
+    .sa_valid(sa_out_valid & cu_systolic_valid),
     .sa_wdata(sa_out_data),
     .busy(sa_wb_busy),
     .sram_en(sram1_p0_en),
@@ -210,16 +243,15 @@ module conv_accelerator_top #(
   // ============================================
   // Calculate total pixels: N * N
   wire [13:0] total_pixels = {7'd0, (cfg_N - 1)} * {7'd0, (cfg_N - 1)};
-  
   dl_drain_stream #(
     .ADDR_W(SRAM1_ADDR_W)
   ) u_drain (
     .clk(clk),
     .rst_n(rst_n),
-    .start(start_drain),
+    .start(cu_start_drain),
     .cfg_num_pixels(total_pixels[SRAM1_ADDR_W-1:0]),
     .cfg_split_mode(cfg_split_mode),
-    .done(drain_done),
+    .done(cu_drain_done),
     .sram_en(sram1_p1_en),
     .sram_addr(sram1_p1_addr),
     .sram_rdata(sram1_p1_rdata),

@@ -8,7 +8,7 @@ if {[file exists work]} {
 vlib work
 
 # Compile design files
-vlog -work work control_unit.v
+vlog -work work control_unit/.v
 
 # Compile testbench
 vlog -work work tb_control_unit.v
@@ -27,27 +27,32 @@ add wave -radix unsigned sim:/tb_control_unit/cfg_N
 add wave -radix unsigned sim:/tb_control_unit/cfg_K
 add wave sim:/tb_control_unit/done
 
-add wave -divider "Data Loader Interface"
-add wave sim:/tb_control_unit/dl_busy
-add wave sim:/tb_control_unit/busy_clk
-add wave sim:/tb_control_unit/rx_ready
-add wave sim:/tb_control_unit/rx_valid
-add wave sim:/tb_control_unit/tx_ready
-add wave sim:/tb_control_unit/tx_valid
-
 add wave -divider "Configuration Outputs"
 add wave -radix unsigned sim:/tb_control_unit/dl_cfg_N
 add wave -radix unsigned sim:/tb_control_unit/dl_cfg_K
 
-add wave -divider "Control Signals"
-add wave sim:/tb_control_unit/start_loading_kernel_to_sram
-add wave sim:/tb_control_unit/start_loading_image_to_sram
+add wave -divider "Data Loader Interface"
+add wave sim:/tb_control_unit/start_loading_data_to_sram
+add wave sim:/tb_control_unit/done_loading_data_to_sram
+add wave sim:/tb_control_unit/start_pass_dl
+
+add wave -divider "Kernel Loading to SA"
 add wave sim:/tb_control_unit/load_kernel
 add wave -radix unsigned sim:/tb_control_unit/kernel_index
+add wave sim:/tb_control_unit/done_loading_kernel_to_sa
+add wave sim:/tb_control_unit/dl_output_data_valid
+
+add wave -divider "Column Loading to SA"
 add wave sim:/tb_control_unit/load_column
 add wave -radix unsigned sim:/tb_control_unit/load_column_index
-add wave sim:/tb_control_unit/systolic_data_valid
+add wave sim:/tb_control_unit/done_loading_column_to_sa
+
+add wave -divider "Output to DRAM"
 add wave sim:/tb_control_unit/start_sending_output_to_dram
+add wave sim:/tb_control_unit/done_sending_output_to_dram
+
+add wave -divider "Systolic Array Control"
+add wave sim:/tb_control_unit/systolic_data_valid
 
 add wave -divider "Internal State"
 add wave sim:/tb_control_unit/dut/state
