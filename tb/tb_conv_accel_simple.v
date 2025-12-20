@@ -2,6 +2,9 @@
 
 module tb_conv_accel_simple;
 
+  // Test case selection parameter
+  parameter TEST_CASE = 1;  // Default to test case 01
+
   // Clock and reset
   reg clk;
   reg rst_n;
@@ -39,6 +42,12 @@ module tb_conv_accel_simple;
   // Output capture
   integer output_file;
   integer tx_word_count;
+
+  // Test case path construction
+  reg [1024*8-1:0] test_name;
+  reg [1024*8-1:0] config_path;
+  reg [1024*8-1:0] input_path;
+  reg [1024*8-1:0] kernel_path;
 
   // ============================================
   // DUT instantiation
@@ -267,16 +276,43 @@ module tb_conv_accel_simple;
     $display("Convolution Accelerator Test");
     $display("========================================");
 
-    load_config_file("./tb/config.txt");
+    // Construct test case paths based on TEST_CASE parameter
+    case (TEST_CASE)
+      1:  test_name = "01_Basic_Minimal";
+      2:  test_name = "02_Basic_Identity";
+      3:  test_name = "03_Basic_AllOnes";
+      4:  test_name = "04_Regular_Standard";
+      5:  test_name = "05_Regular_LargeHalo";
+      6:  test_name = "06_Regular_PingPong";
+      7:  test_name = "07_Adv_MaxSpec";
+      8:  test_name = "08_Adv_Throughput";
+      9:  test_name = "09_Pro_PartialTile";
+      10: test_name = "10_Pro_Saturation";
+      default: begin
+        $display("ERROR: Invalid TEST_CASE=%0d. Valid range is 1-10.", TEST_CASE);
+        $finish;
+      end
+    endcase
+
+    $sformat(config_path, "./test_cases/%0s_config.txt", test_name);
+    $sformat(input_path, "./test_cases/%0s_in.hex", test_name);
+    $sformat(kernel_path, "./test_cases/%0s_weight.hex", test_name);
+
+    $display("Running test case: %0s", test_name);
+    $display("Config:  %0s", config_path);
+    $display("Input:   %0s", input_path);
+    $display("Kernel:  %0s", kernel_path);
+
+    load_config_file(config_path);
     cfg_N = parsed_n[6:0];
     cfg_K = parsed_k[4:0];
     cfg_output_size = parsed_output_size[15:0];
 
     $display("Configuration: N=%0d, K=%0d, Expected Output Size=%0d", cfg_N, cfg_K, cfg_output_size);
 
-    load_input_file("./tb/input.hex");
+    load_input_file(input_path);
 
-    load_kernel_file("./tb/kernel.hex");
+    load_kernel_file(kernel_path);
 
     // Start convolution
     $display("\n[%0t] Starting convolution operation", $time);

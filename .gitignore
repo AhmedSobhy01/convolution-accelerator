@@ -14,7 +14,7 @@
 *.elf
 *.map
 *.bin
-*.hex
+# *.hex
 transcript
 vsim.wlf
 work/
@@ -76,6 +76,6 @@ transcript*
 sc_dpiheader.h
 vsim.dbg
 *.vcd
-test_cases
+
 output_data.txt
 output_expected.txt
