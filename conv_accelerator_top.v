@@ -24,9 +24,9 @@ module conv_accelerator_top #(
   input  wire         rx_valid,
   output wire         rx_ready,
 
-  // DRAM output stream (32-bit) <- SRAM1
+  // DRAM output stream (8-bit) <- SRAM1
   output wire         tx_valid,
-  output wire [31:0]  tx_data,
+  output wire [7:0]   tx_data,
   input  wire         tx_ready
 );
 
