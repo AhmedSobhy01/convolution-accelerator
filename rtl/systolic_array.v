@@ -33,7 +33,7 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
                 .in_top(input_in[j*INPUT_WIDTH +: INPUT_WIDTH]),
-                .in_left(pe_left_out[i][j-1]),
+                .in_left(kernel_in[j*INPUT_WIDTH +: INPUT_WIDTH]),
                 .out_partial(pe_out_partials[i][j]),
                 .out_down(pe_out[i][j]),
                 .out_right(pe_left_out[i][j])
@@ -44,7 +44,7 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
                 .in_top(pe_out[i-1][j]),
-                .in_left(kernel_in[i*INPUT_WIDTH +: INPUT_WIDTH]),
+                .in_left(pe_left_out[i-1][j]),
                 .out_partial(pe_out_partials[i][j]),
                 .out_down(pe_out[i][j]),
                 .out_right(pe_left_out[i][j])
@@ -55,7 +55,7 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 .rst(rst),
                 .load_kernel_signal(load_kernel_signal),
                 .in_top(pe_out[i-1][j]),
-                .in_left(pe_left_out[i][j-1]),
+                .in_left(pe_left_out[i-1][j]),
                 .out_partial(pe_out_partials[i][j]),
                 .out_down(pe_out[i][j]),
                 .out_right(pe_left_out[i][j])
