@@ -76,3 +76,5 @@ transcript*
 sc_dpiheader.h
 vsim.dbg
 *.vcd
+test_cases
+output_data.txt
