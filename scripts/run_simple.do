@@ -197,7 +197,6 @@ add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_dma
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_dma/rx_valid
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_dma/rx_ready
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/u_dma/rx_data
-add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/u_dma/buf_lo
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_dma/img_written
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_dma/sram0_en
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/u_dma/sram0_wdata
