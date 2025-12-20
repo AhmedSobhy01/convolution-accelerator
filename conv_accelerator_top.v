@@ -281,7 +281,8 @@ module conv_accelerator_top #(
   // ============================================
   // Calculate total pixels: (N-K+1) * (N-K+1)
   wire [6:0] output_dim = cfg_N - cfg_K + 1;
-  wire [13:0] total_pixels = {7'd0, (cfg_N - 1)} * {7'd0, (cfg_N - 1)};
+  wire [13:0] total_pixels = {7'd0, output_dim} * {7'd0, output_dim};
+  wire cfg_split_mode = (cfg_K > SA_DIM);
   dl_drain_stream #(
     .ADDR_W(SRAM1_ADDR_W)
   ) u_drain (
