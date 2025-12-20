@@ -279,7 +279,8 @@ module conv_accelerator_top #(
   // ============================================
   // Drain (SRAM1 -> DRAM)
   // ============================================
-  // Calculate total pixels: N * N
+  // Calculate total pixels: (N-K+1) * (N-K+1)
+  wire [6:0] output_dim = cfg_N - cfg_K + 1;
   wire [13:0] total_pixels = {7'd0, (cfg_N - 1)} * {7'd0, (cfg_N - 1)};
   dl_drain_stream #(
     .ADDR_W(SRAM1_ADDR_W)
@@ -288,6 +289,7 @@ module conv_accelerator_top #(
     .rst_n(rst_n),
     .start(cu_start_drain),
     .cfg_num_pixels(total_pixels[SRAM1_ADDR_W-1:0]),
+    .cfg_output_dim(output_dim),
     .cfg_split_mode(cfg_split_mode),
     .done(cu_drain_done),
     .sram_en(sram1_p1_en),

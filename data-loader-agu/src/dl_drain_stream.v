@@ -9,6 +9,7 @@ module dl_drain_stream #(
   // Control Signals
   input  wire               start,
   input  wire [ADDR_W-1:0]  cfg_num_pixels,
+  input  wire [6:0]         cfg_output_dim,
   input  wire               cfg_split_mode,
   output reg                done,
 
@@ -30,22 +31,28 @@ module dl_drain_stream #(
   // T2: ST_READ_2 (Addr 2). SRAM outputs Data 0. Latch Data 0.
   // T3: ST_READ_3 (Addr 3). SRAM outputs Data 1. Latch Data 1.
   localparam ST_IDLE    = 3'd0;
-  localparam ST_READ_0  = 3'd1; 
-  localparam ST_READ_1  = 3'd2; 
-  localparam ST_READ_2  = 3'd3; 
-  localparam ST_READ_3  = 3'd4; 
-  localparam ST_LATCH_1 = 3'd5; 
-  localparam ST_SEND    = 3'd6; 
+  localparam ST_READ_0  = 3'd1;
+  localparam ST_READ_1  = 3'd2;
+  localparam ST_READ_2  = 3'd3;
+  localparam ST_READ_3  = 3'd4;
+  localparam ST_LATCH_1 = 3'd5;
+  localparam ST_SEND    = 3'd6;
 
   reg [2:0] state;
   reg [ADDR_W-1:0] pixel_cnt;
   reg [31:0] pack_buf;
 
+  // Row-major to column-major address conversion
+  reg [6:0] row_cnt;  // Current row (0 to output_dim-1)
+  reg [6:0] col_cnt;  // Current column (0 to output_dim-1)
+
+  wire [ADDR_W-1:0] sram_addr_calc = col_cnt * cfg_output_dim + row_cnt;
+
   // Summation Logic (Combinational)
   reg [7:0] computed_pixel;
   reg [9:0] sum_temp;
 
-  // CHANGED: Use Combinational Logic here. 
+  // CHANGED: Use Combinational Logic here.
   // sram_rdata is already registered inside the SRAM.
   always @(*) begin
     if (cfg_split_mode) begin
@@ -62,6 +69,8 @@ module dl_drain_stream #(
       sram_en    <= 1'b0;
       sram_addr  <= {ADDR_W{1'b0}};
       pixel_cnt  <= {ADDR_W{1'b0}};
+      row_cnt    <= 7'd0;
+      col_cnt    <= 7'd0;
       pack_buf   <= 32'd0;
       tx_valid   <= 1'b0;
       tx_data    <= 32'd0;
@@ -74,6 +83,8 @@ module dl_drain_stream #(
       case (state)
         ST_IDLE: begin
           pixel_cnt <= {ADDR_W{1'b0}};
+          row_cnt   <= 7'd0;
+          col_cnt   <= 7'd0;
           if (start) state <= ST_READ_0;
         end
 
@@ -83,8 +94,14 @@ module dl_drain_stream #(
             state <= ST_IDLE;
           end else begin
             sram_en   <= 1'b1;
-            sram_addr <= pixel_cnt;
+            sram_addr <= sram_addr_calc;
             pixel_cnt <= pixel_cnt + 1'b1;
+            if (col_cnt + 1'b1 >= cfg_output_dim) begin
+              col_cnt <= 7'd0;
+              row_cnt <= row_cnt + 1'b1;
+            end else begin
+              col_cnt <= col_cnt + 1'b1;
+            end
             state     <= ST_READ_1;
           end
         end
@@ -92,8 +109,14 @@ module dl_drain_stream #(
         ST_READ_1: begin // Cycle T1: Req Px1
           if (pixel_cnt < cfg_num_pixels) begin
             sram_en   <= 1'b1;
-            sram_addr <= pixel_cnt;
+            sram_addr <= sram_addr_calc;
             pixel_cnt <= pixel_cnt + 1'b1;
+            if (col_cnt + 1'b1 >= cfg_output_dim) begin
+              col_cnt <= 7'd0;
+              row_cnt <= row_cnt + 1'b1;
+            end else begin
+              col_cnt <= col_cnt + 1'b1;
+            end
           end
           state <= ST_READ_2;
         end
@@ -101,11 +124,17 @@ module dl_drain_stream #(
         ST_READ_2: begin // Cycle T2: Req Px2. Data Px0 is valid at sram_rdata.
           // Capture Px0
           pack_buf[7:0] <= computed_pixel;
-          
+
           if (pixel_cnt < cfg_num_pixels) begin
             sram_en   <= 1'b1;
-            sram_addr <= pixel_cnt;
+            sram_addr <= sram_addr_calc;
             pixel_cnt <= pixel_cnt + 1'b1;
+            if (col_cnt + 1'b1 >= cfg_output_dim) begin
+              col_cnt <= 7'd0;
+              row_cnt <= row_cnt + 1'b1;
+            end else begin
+              col_cnt <= col_cnt + 1'b1;
+            end
           end
           state <= ST_READ_3;
         end
@@ -116,8 +145,14 @@ module dl_drain_stream #(
 
           if (pixel_cnt < cfg_num_pixels) begin
             sram_en   <= 1'b1;
-            sram_addr <= pixel_cnt;
+            sram_addr <= sram_addr_calc;
             pixel_cnt <= pixel_cnt + 1'b1;
+            if (col_cnt + 1'b1 >= cfg_output_dim) begin
+              col_cnt <= 7'd0;
+              row_cnt <= row_cnt + 1'b1;
+            end else begin
+              col_cnt <= col_cnt + 1'b1;
+            end
           end
           state <= ST_LATCH_1;
         end
