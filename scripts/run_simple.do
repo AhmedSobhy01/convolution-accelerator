@@ -1,7 +1,7 @@
 # ==============================================================================
 # ModelSim/QuestaSim DO File for Simple Convolution Accelerator Test
 # ==============================================================================
-# Description: Comprehensive simulation script for testing the convolution 
+# Description: Comprehensive simulation script for testing the convolution
 #              accelerator with full waveform capture and hierarchical view
 # ==============================================================================
 
@@ -224,9 +224,11 @@ add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/sram1_p0_a
 
 add wave -noupdate -divider "═══════════════════ DRAIN STREAM ═══════════════════"
 add wave -noupdate -color "Yellow" /tb_conv_accel_simple/dut/u_drain/state
-add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_drain/pixel_cnt
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_drain/read_cnt
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_drain/tx_cnt
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_drain/cfg_num_pixels
 add wave -noupdate -color "White" /tb_conv_accel_simple/dut/u_drain/cfg_split_mode
+add wave -noupdate -color "Orange" -radix binary /tb_conv_accel_simple/dut/u_drain/valid_sr
 add wave -noupdate -divider "Drain -> SRAM1"
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/sram1_p1_en
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/sram1_p1_addr
