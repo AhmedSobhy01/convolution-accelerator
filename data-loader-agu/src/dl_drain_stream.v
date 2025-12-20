@@ -18,29 +18,24 @@ module dl_drain_stream #(
   output reg [ADDR_W-1:0]   sram_addr,
   input  wire [31:0]        sram_rdata,
 
-  // DRAM Output Stream
+  // DRAM Output Stream (Byte-by-byte)
   output reg                tx_valid,
-  output reg [31:0]         tx_data,
+  output reg [7:0]          tx_data,
   input  wire               tx_ready
 );
 
-  // Expanded States for 2-cycle latency
+  // Simplified States for byte-by-byte streaming
   // Timing:
-  // T0: ST_READ_0 (Addr 0)
-  // T1: ST_READ_1 (Addr 1). SRAM latches Addr 0.
-  // T2: ST_READ_2 (Addr 2). SRAM outputs Data 0. Latch Data 0.
-  // T3: ST_READ_3 (Addr 3). SRAM outputs Data 1. Latch Data 1.
-  localparam ST_IDLE    = 3'd0;
-  localparam ST_READ_0  = 3'd1;
-  localparam ST_READ_1  = 3'd2;
-  localparam ST_READ_2  = 3'd3;
-  localparam ST_READ_3  = 3'd4;
-  localparam ST_LATCH_1 = 3'd5;
-  localparam ST_SEND    = 3'd6;
+  // T0: ST_READ (Request pixel from SRAM)
+  // T1: ST_WAIT (Wait for SRAM 2-cycle latency)
+  // T2: ST_SEND (Data valid, send to DRAM)
+  localparam ST_IDLE = 2'd0;
+  localparam ST_READ = 2'd1;
+  localparam ST_WAIT = 2'd2;
+  localparam ST_SEND = 2'd3;
 
-  reg [2:0] state;
+  reg [1:0] state;
   reg [ADDR_W-1:0] pixel_cnt;
-  reg [31:0] pack_buf;
 
   // Row-major to column-major address conversion
   reg [6:0] row_cnt;  // Current row (0 to output_dim-1)
@@ -71,9 +66,8 @@ module dl_drain_stream #(
       pixel_cnt  <= {ADDR_W{1'b0}};
       row_cnt    <= 7'd0;
       col_cnt    <= 7'd0;
-      pack_buf   <= 32'd0;
       tx_valid   <= 1'b0;
-      tx_data    <= 32'd0;
+      tx_data    <= 8'd0;
       done       <= 1'b0;
     end else begin
       // Defaults
@@ -85,101 +79,51 @@ module dl_drain_stream #(
           pixel_cnt <= {ADDR_W{1'b0}};
           row_cnt   <= 7'd0;
           col_cnt   <= 7'd0;
-          if (start) state <= ST_READ_0;
+          tx_valid  <= 1'b0;
+          if (start) state <= ST_READ;
         end
 
-        ST_READ_0: begin // Cycle T0: Req Px0
+        ST_READ: begin
+          // Check if all pixels have been processed
           if (pixel_cnt >= cfg_num_pixels) begin
             done  <= 1'b1;
             state <= ST_IDLE;
           end else begin
+            // Request pixel from SRAM
             sram_en   <= 1'b1;
             sram_addr <= sram_addr_calc;
             pixel_cnt <= pixel_cnt + 1'b1;
+            
+            // Update row/col counters for column-major addressing
             if (col_cnt + 1'b1 >= cfg_output_dim) begin
               col_cnt <= 7'd0;
               row_cnt <= row_cnt + 1'b1;
             end else begin
               col_cnt <= col_cnt + 1'b1;
             end
-            state     <= ST_READ_1;
+            
+            state <= ST_WAIT;
           end
         end
 
-        ST_READ_1: begin // Cycle T1: Req Px1
-          if (pixel_cnt < cfg_num_pixels) begin
-            sram_en   <= 1'b1;
-            sram_addr <= sram_addr_calc;
-            pixel_cnt <= pixel_cnt + 1'b1;
-            if (col_cnt + 1'b1 >= cfg_output_dim) begin
-              col_cnt <= 7'd0;
-              row_cnt <= row_cnt + 1'b1;
-            end else begin
-              col_cnt <= col_cnt + 1'b1;
-            end
-          end
-          state <= ST_READ_2;
-        end
-
-        ST_READ_2: begin // Cycle T2: Req Px2. Data Px0 is valid at sram_rdata.
-          // Capture Px0
-          pack_buf[7:0] <= computed_pixel;
-
-          if (pixel_cnt < cfg_num_pixels) begin
-            sram_en   <= 1'b1;
-            sram_addr <= sram_addr_calc;
-            pixel_cnt <= pixel_cnt + 1'b1;
-            if (col_cnt + 1'b1 >= cfg_output_dim) begin
-              col_cnt <= 7'd0;
-              row_cnt <= row_cnt + 1'b1;
-            end else begin
-              col_cnt <= col_cnt + 1'b1;
-            end
-          end
-          state <= ST_READ_3;
-        end
-
-        ST_READ_3: begin // Cycle T3: Req Px3. Data Px1 is valid.
-          // Capture Px1
-          pack_buf[15:8] <= computed_pixel;
-
-          if (pixel_cnt < cfg_num_pixels) begin
-            sram_en   <= 1'b1;
-            sram_addr <= sram_addr_calc;
-            pixel_cnt <= pixel_cnt + 1'b1;
-            if (col_cnt + 1'b1 >= cfg_output_dim) begin
-              col_cnt <= 7'd0;
-              row_cnt <= row_cnt + 1'b1;
-            end else begin
-              col_cnt <= col_cnt + 1'b1;
-            end
-          end
-          state <= ST_LATCH_1;
-        end
-
-        ST_LATCH_1: begin // Cycle T4. Data Px2 is valid.
-          // Capture Px2
-          pack_buf[23:16] <= computed_pixel;
+        ST_WAIT: begin
+          // Wait one cycle for SRAM 2-cycle latency
+          // (First cycle was ST_READ, second cycle is ST_WAIT, data ready in ST_SEND)
           state <= ST_SEND;
         end
 
-        ST_SEND: begin // Cycle T5. Data Px3 is valid.
+        ST_SEND: begin
+          // Data is now valid from SRAM, computed_pixel has the result
           if (!tx_valid) begin
-             // Capture Px3 and Drive Output
-             pack_buf[31:24] <= computed_pixel;
-             tx_data         <= {computed_pixel, pack_buf[23:0]};
-             tx_valid        <= 1'b1;
+            // Drive output with computed pixel
+            tx_data  <= computed_pixel;
+            tx_valid <= 1'b1;
           end else begin
-             // Handshake
-             if (tx_ready) begin
-               tx_valid <= 1'b0;
-               if (pixel_cnt >= cfg_num_pixels) begin
-                 done  <= 1'b1;
-                 state <= ST_IDLE;
-               end else begin
-                 state <= ST_READ_0;
-               end
-             end
+            // Wait for handshake
+            if (tx_ready) begin
+              tx_valid <= 1'b0;
+              state    <= ST_READ;
+            end
           end
         end
 
@@ -190,5 +134,6 @@ module dl_drain_stream #(
       endcase
     end
   end
+
 
 endmodule
