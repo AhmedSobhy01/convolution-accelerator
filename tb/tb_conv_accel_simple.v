@@ -15,7 +15,7 @@ module tb_conv_accel_simple;
   wire done;
 
   // DRAM interface
-  reg [31:0]  rx_data;
+  reg [7:0]  rx_data;
   reg         rx_valid;
   wire        rx_ready;
   wire        tx_valid;
@@ -25,7 +25,7 @@ module tb_conv_accel_simple;
   // File reading variables
   integer file_handle;
   integer scan_result;
-  reg [31:0] data_buffer [0:8191];
+  reg [7:0] data_buffer [0:8191];
   integer data_count;
   integer data_index;
 
@@ -78,7 +78,7 @@ module tb_conv_accel_simple;
         $display("ERROR: Could not open file %s", filename);
         $finish;
       end
-      
+
       data_count = 0;
       while (!$feof(file_handle)) begin
         scan_result = $fscanf(file_handle, "%h\n", data_buffer[data_count]);
@@ -86,7 +86,7 @@ module tb_conv_accel_simple;
           data_count = data_count + 1;
         end
       end
-      
+
       $fclose(file_handle);
       $display("[%0t] Loaded %0d words from %s", $time, data_count, filename);
     end
@@ -96,23 +96,23 @@ module tb_conv_accel_simple;
   // DRAM Input Streaming
   // ============================================
   initial begin
-    rx_data = 32'd0;
+    rx_data = 8'd0;
     rx_valid = 1'b0;
     data_index = 0;
-    
+
     @(posedge start);
     @(posedge clk);
-    
+
     while (data_index < data_count) begin
       rx_data = data_buffer[data_index];
       rx_valid = 1'b1;
-      
+
       @(posedge clk);
       while (!rx_ready) @(posedge clk);
-      
+
       data_index = data_index + 1;
     end
-    
+
     rx_valid = 1'b0;
     rx_data = 32'd0;
     $display("[%0t] Input data streaming complete", $time);
@@ -124,11 +124,11 @@ module tb_conv_accel_simple;
   initial begin : output_capture
     tx_ready = 1'b1;
     tx_word_count = 0;
-    
+
     @(posedge start);
-    
+
     output_file = $fopen("output_data.txt", "w");
-    
+
     forever begin
       @(posedge clk);
       if (tx_valid && tx_ready) begin
@@ -136,7 +136,7 @@ module tb_conv_accel_simple;
         $display("[%0t] TX: %08h (word %0d)", $time, tx_data, tx_word_count);
         tx_word_count = tx_word_count + 1;
       end
-      
+
       if (done) begin
         $fclose(output_file);
         $display("[%0t] Output capture complete. Total words: %0d", $time, tx_word_count);
@@ -154,39 +154,39 @@ module tb_conv_accel_simple;
     start = 0;
     cfg_N = 6'd16;
     cfg_K = 4'd3;
-    
+
     repeat(5) @(posedge clk);
     rst_n = 1;
     repeat(2) @(posedge clk);
-    
+
     $display("========================================");
     $display("Convolution Accelerator Test");
     $display("========================================");
     $display("Configuration: N=%0d, K=%0d", cfg_N, cfg_K);
-    
+
     // Load input data file
     load_data_file("./tb/inputdata.data");
-    
+
     // Start convolution
     $display("\n[%0t] Starting convolution operation", $time);
     @(posedge clk);
     start = 1'b1;
     @(posedge clk);
     start = 1'b0;
-    
+
     // Wait for completion
     wait(done);
     repeat(10) @(posedge clk);
-    
+
     $display("\n========================================");
     $display("TEST COMPLETED SUCCESSFULLY");
     $display("========================================");
-    $display("Expected output size: %0d x %0d = %0d pixels", 
-             cfg_N - cfg_K + 1, cfg_N - cfg_K + 1, 
+    $display("Expected output size: %0d x %0d = %0d pixels",
+             cfg_N - cfg_K + 1, cfg_N - cfg_K + 1,
              (cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1));
-    $display("Expected TX words: %0d (4 pixels per word)", 
+    $display("Expected TX words: %0d (4 pixels per word)",
              ((cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1)) / 4);
-    
+
     $finish;
   end
 

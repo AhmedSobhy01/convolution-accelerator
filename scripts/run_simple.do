@@ -16,6 +16,7 @@ vlog -work work data-loader-agu/src/byte_window_streamer.v
 vlog -work work data-loader-agu/src/kernel_window_streamer.v
 vlog -work work data-loader-agu/src/dl_sa_writeback.v
 vlog -work work data-loader-agu/src/dl_drain_stream.v
+vlog -work work data-loader-agu/src/simple_ram_models.v
 
 # Compile SRAM wrappers
 vlog -work work data-loader-agu/src/sram0_wrapper.v
