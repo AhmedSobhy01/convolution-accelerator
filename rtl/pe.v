@@ -27,7 +27,8 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
         end
     end
 
-    assign out_partial = left_reg * top_reg;
+    // Operand isolation: zero output when PE is idle to reduce switching power
+    assign out_partial = pe_enable ? (left_reg * top_reg) : {DATA_WIDTH{1'b0}};
     assign out_down    = top_reg;
     assign out_right   = left_reg;
 
