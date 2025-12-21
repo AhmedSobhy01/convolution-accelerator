@@ -16,7 +16,7 @@ module kernel_and_window_streamer #(
   output reg          kernel_done,
 
   input  wire         start_stream_window,
-  input  wire [15:0]  window_col,
+  input  wire [6:0]   window_col,
   output reg          window_done,
 
   output reg          w_valid,
@@ -115,7 +115,7 @@ module kernel_and_window_streamer #(
           w_valid <= 1'b1;
           w_data  <= reader_resp_data;
           col_resp_cnt <= col_resp_cnt + 1'b1;
-          
+
           // Check if all responses received
           if (col_resp_cnt + 1'b1 >= ker_rows_total) begin
             kernel_done <= 1'b1;
@@ -124,7 +124,7 @@ module kernel_and_window_streamer #(
           p_valid <= 1'b1;
           p_data  <= reader_resp_data;
           row_resp_cnt <= row_resp_cnt + 1'b1;
-          
+
           if (row_resp_cnt + 1'b1 >= img_rows_total) begin
             window_done <= 1'b1;
           end
@@ -142,7 +142,7 @@ module kernel_and_window_streamer #(
           row_cnt <= 7'd0;
           row_resp_cnt <= 7'd0;
           reader_req_valid <= 1'b0;
-          
+
           if (start_load_kernel) begin
             state <= LOAD_KERNEL;
           end else if (start_stream_window) begin

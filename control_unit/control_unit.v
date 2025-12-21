@@ -25,7 +25,7 @@ module control_unit #(
 
     // Image column loading control
     output reg load_column,
-    output wire [15:0] load_column_index,
+    output wire [6:0] load_column_index,
     input wire done_loading_column_to_sa,
 
     output reg start_sending_output_to_dram,
@@ -54,7 +54,7 @@ module control_unit #(
 
   wire [6:0] max_columns = (cfg_N - cfg_K + 1);  // Max 64-2+1 = 63
   wire [4:0] right_column_offset = (cfg_K % 2) == 0 ? (cfg_K>>1) : (cfg_K>>1) + 1;
-  assign load_column_index = {9'd0, sa_cols_counter} + ((kernel_index % 2 == 0) ? 16'd0 : {11'd0, right_column_offset});
+  assign load_column_index = sa_cols_counter + ((kernel_index % 2 == 0) ? 7'd0 : {2'd0, right_column_offset});
 
   // Kernal is split into halfs if K > SA_SIZE
   reg [3:0] current_kernel_width;
@@ -220,6 +220,7 @@ module control_unit #(
             end
             else
             begin
+              start_sending_output_to_dram <= 1'b1;
               state <= STORE_OUT;
             end
           end
@@ -227,8 +228,6 @@ module control_unit #(
 
         STORE_OUT:
         begin
-          start_sending_output_to_dram <= 1'b1;
-
           if (done_sending_output_to_dram)
           begin
             state <= DONE_STATE;

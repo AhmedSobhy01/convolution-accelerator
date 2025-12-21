@@ -62,7 +62,7 @@ module conv_accelerator_top #(
   wire [1:0]   cu_kernel_idx;
   wire         cu_kernel_done;
   wire         cu_load_column;
-  wire [15:0]   cu_column_idx;
+  wire [6:0]   cu_column_idx;
   wire         cu_start_drain;
   wire         cu_drain_done;
   wire         cu_systolic_valid;
@@ -231,6 +231,7 @@ module conv_accelerator_top #(
     .clk(clk),
     .rst(cu_start_load),
     .load_kernel_signal(w_valid),
+    .p_valid(p_valid),
     .input_in(p_data),
     .kernel_in(w_data),
     .out_data(sa_result)

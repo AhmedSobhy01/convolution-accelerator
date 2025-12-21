@@ -3,10 +3,12 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
     input wire clk,
     input wire rst,
     input wire load_kernel_signal,
+    input wire p_valid,
     input wire [(INPUT_WIDTH*ARRAY_SIZE)-1:0] input_in,
     input wire [(INPUT_WIDTH*ARRAY_SIZE)-1:0] kernel_in,
     output wire [DATA_WIDTH-1:0] out_data
 );
+    wire pe_enable = load_kernel_signal | p_valid;
 
     wire [INPUT_WIDTH-1:0] pe_left_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
     wire [INPUT_WIDTH-1:0] pe_out [0:ARRAY_SIZE-1][0:ARRAY_SIZE-1];
@@ -20,6 +22,7 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 pe #(.DATA_WIDTH(DATA_WIDTH), .INPUT_WIDTH(INPUT_WIDTH)) pe_inst (
                 .clk(clk),
                 .rst(rst),
+                .pe_enable(pe_enable),
                 .load_kernel_signal(load_kernel_signal),
                 .in_top(input_in[0 +: INPUT_WIDTH]),
                 .in_left(kernel_in[0 +: INPUT_WIDTH]),
@@ -31,6 +34,7 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 pe #(.DATA_WIDTH(DATA_WIDTH), .INPUT_WIDTH(INPUT_WIDTH)) pe_inst (
                 .clk(clk),
                 .rst(rst),
+                .pe_enable(pe_enable),
                 .load_kernel_signal(load_kernel_signal),
                 .in_top(input_in[j*INPUT_WIDTH +: INPUT_WIDTH]),
                 .in_left(kernel_in[j*INPUT_WIDTH +: INPUT_WIDTH]),
@@ -42,6 +46,7 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 pe #(.DATA_WIDTH(DATA_WIDTH), .INPUT_WIDTH(INPUT_WIDTH)) pe_inst (
                 .clk(clk),
                 .rst(rst),
+                .pe_enable(pe_enable),
                 .load_kernel_signal(load_kernel_signal),
                 .in_top(pe_out[i-1][j]),
                 .in_left(pe_left_out[i-1][j]),
@@ -53,6 +58,7 @@ module systolic_array #(parameter DATA_WIDTH = 32, parameter ARRAY_SIZE = 4, par
                 pe #(.DATA_WIDTH(DATA_WIDTH), .INPUT_WIDTH(INPUT_WIDTH)) pe_inst (
                 .clk(clk),
                 .rst(rst),
+                .pe_enable(pe_enable),
                 .load_kernel_signal(load_kernel_signal),
                 .in_top(pe_out[i-1][j]),
                 .in_left(pe_left_out[i-1][j]),
