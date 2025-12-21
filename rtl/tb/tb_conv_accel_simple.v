@@ -3,7 +3,7 @@
 module tb_conv_accel_simple;
 
   // Test case selection parameter
-  parameter TEST_CASE = 2;  // Default to test case 01
+  parameter TEST_CASE =   1;  // Default to test case 01
 
   // Clock and reset
   reg clk;
