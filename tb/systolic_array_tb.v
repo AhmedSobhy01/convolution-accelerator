@@ -169,9 +169,9 @@ module systolic_array_tb;
         // [20 40 50]
         // [10 20 30]
         // [100 10 60]
-        kernel_vectors[0] = {8'd20, 8'd40, 8'd50};
-        kernel_vectors[1] = {8'd10, 8'd20, 8'd30};
-        kernel_vectors[2] = {8'd100, 8'd10, 8'd60};
+        kernel_vectors[0] = {8'd1, 8'd1, 8'd0};
+        kernel_vectors[1] = {8'd4, 8'd2, 8'd0};
+        kernel_vectors[2] = {8'd0, 8'd0, 8'd0};
 
         // [12, 52, 32]
         // [20, 18, 28]
@@ -182,18 +182,17 @@ module systolic_array_tb;
         // [88, 72, 62]
         // [42, 23, 28]
         // [29, 56, 2]
-        input_vectors[0] = {8'd12, 8'd0, 8'd0};
-        input_vectors[1] = {8'd20, 8'd52, 8'd0};
-        input_vectors[2] = {8'd34, 8'd18, 8'd32};
-        input_vectors[3] = {8'd9, 8'd37, 8'd28};
-        input_vectors[4] = {8'd22, 8'd6, 8'd1};
-        input_vectors[5] = {8'd18, 8'd98, 8'd28};
-        input_vectors[6] = {8'd88, 8'd12, 8'd32};
-        input_vectors[7] = {8'd42, 8'd72, 8'd17};
-        input_vectors[8] = {8'd29, 8'd23, 8'd62};
-        input_vectors[9] = {8'd0, 8'd56, 8'd28};
-        input_vectors[10] = {8'd0, 8'd0, 8'd2};
-
+        input_vectors[0] = {8'h13, 8'd0, 8'd0};
+        input_vectors[1] = {8'h1E, 8'h14, 8'd0};
+        input_vectors[2] = {8'h22, 8'h18, 8'd0};
+        input_vectors[3] = {8'h0A, 8'h28, 8'd0};
+        input_vectors[4] = {8'h1F, 8'h2F, 8'd0};
+        input_vectors[5] = {8'h25, 8'h26, 8'd0};
+        input_vectors[6] = {8'h1F, 8'h1B, 8'd0};
+        input_vectors[7] = {8'd42, 8'd72, 8'd0};
+        input_vectors[8] = {8'd29, 8'd23, 8'd0};
+        input_vectors[9] = {8'd0, 8'd56, 8'd0};
+        input_vectors[10] = {8'd0, 8'd0, 8'd0};
 
         expected_outputs[0] = 32'd9150;
         expected_outputs[1] = 32'd6270;

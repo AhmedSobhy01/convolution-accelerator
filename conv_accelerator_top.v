@@ -26,7 +26,7 @@ module conv_accelerator_top #(
 
   // DRAM output stream (32-bit) <- SRAM1
   output wire         tx_valid,
-  output wire [31:0]  tx_data,
+  output wire [7:0]  tx_data,
   input  wire         tx_ready
 );
 
@@ -66,6 +66,10 @@ module conv_accelerator_top #(
   wire         cu_start_drain;
   wire         cu_drain_done;
   wire         cu_systolic_valid;
+  wire insert_nop_to_systolic;
+
+  wire [15:0]  start_col;
+  wire [15:0]  end_col;
 
   // ============================================
   // SRAM0 Signals (Input Buffer)
@@ -122,7 +126,10 @@ module conv_accelerator_top #(
     .done_loading_column_to_sa(window_done),
     .start_sending_output_to_dram(cu_start_drain),
     .done_sending_output_to_dram(cu_drain_done),
-    .systolic_data_valid(cu_systolic_valid)
+    .systolic_data_valid(cu_systolic_valid),
+    .insert_nop_to_systolic(insert_nop_to_systolic),
+    .start_column_index(start_col),
+    .end_column_index(end_col)
   );
 
   // ============================================
@@ -204,12 +211,13 @@ module conv_accelerator_top #(
     .kernel_idx(cu_kernel_idx),
     .kernel_done(cu_kernel_done),
     .start_stream_window(cu_load_column),
-    .window_col(cu_column_idx),
     .window_done(window_done),
     .w_valid(w_valid),
     .w_data(w_data),
     .p_valid(p_valid),
     .p_data(p_data),
+    .end_col(end_col),
+    .start_col(start_col),
     .reader_req_valid(reader_req_valid),
     .reader_byte_addr(reader_byte_addr),
     .reader_len_bytes(reader_len_bytes),
@@ -222,14 +230,17 @@ module conv_accelerator_top #(
   // Systolic Array (8x8)
   // ============================================
   wire [31:0] sa_result;
-  wire sa_accept_intput = clk && (p_valid || w_valid) ;
+  wire sa_accept_intput = clk && (p_valid || w_valid || insert_nop_to_systolic) ;
 
-  reg [63:0] p_data_delayed;
-  reg [63:0] w_data_delayed;
-  always @(negedge clk) begin
-    p_data_delayed <= p_data;
-    w_data_delayed <= w_data;
-  end
+  // wire [63:0] p_data_middleware = (insert_nop_to_systolic) ? 64'd0 : p_data;
+  // reg [63:0] w_data_flipped;
+  
+  wire [63:0] p_data_flipped = {p_data[7:0], p_data[15:8], p_data[23:16], p_data[31:24],
+                       p_data[39:32], p_data[47:40], p_data[55:48], p_data[63:56]};
+  wire [63:0] w_data_flipped = {w_data[7:0], w_data[15:8], w_data[23:16], w_data[31:24],
+                       w_data[39:32], w_data[47:40], w_data[55:48], w_data[63:56]};
+
+  wire [63:0] w_data_middleware = (insert_nop_to_systolic) ? 64'd0 : w_data_flipped;
 
   systolic_array #(
     .DATA_WIDTH(32),
@@ -239,9 +250,9 @@ module conv_accelerator_top #(
     .clk(sa_accept_intput),
     // .rst(~rst_n),
     .rst(cu_start_load),
-    .load_kernel_signal(w_valid),
-    .input_in(p_data),
-    .kernel_in(w_data),
+    .load_kernel_signal(w_valid || insert_nop_to_systolic),
+    .input_in(p_data_flipped),
+    .kernel_in(w_data_middleware),
     .out_data(sa_result)
   );
 

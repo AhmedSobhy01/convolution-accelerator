@@ -76,23 +76,39 @@ add wave -noupdate -color "Orange" /tb_conv_accel_simple/tx_ready
 add wave -noupdate -divider "═══════════════════ CONTROL UNIT ═══════════════════"
 add wave -noupdate -divider "State Machine"
 add wave -noupdate -color "Yellow" /tb_conv_accel_simple/dut/u_control/state
-add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/sa_input_rows_counter
-add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/sa_output_rows_counter
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/counter
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/sa_cols_counter
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/padding_rows_counter
 add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_control/kernel_index
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_control/systolic_data_valid
+add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_control/insert_nop_to_systolic
+add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/start_col
+add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/end_col
 
-add wave -noupdate -divider "Control Signals"
+add wave -noupdate -divider "Control Signals (Outputs)"
+add wave -noupdate -color "Green" /tb_conv_accel_simple/dut/u_control/done
+add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/u_control/start_loading_data_to_sram
+add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/u_control/start_pass_dl
+add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/u_control/load_kernel
+add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/u_control/load_column
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/load_column_index
+add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/u_control/start_sending_output_to_dram
+
+add wave -noupdate -divider "Control Signals (Top Level Connections)"
 add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/cu_start_load
 add wave -noupdate -color "Green"   /tb_conv_accel_simple/dut/cu_load_done
+add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/cu_start_pass
 add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/cu_load_kernel
 add wave -noupdate -color "Green"   /tb_conv_accel_simple/dut/cu_kernel_done
 add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/cu_load_column
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/cu_column_idx
+add wave -noupdate -color "Green"   /tb_conv_accel_simple/dut/window_done
 add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/cu_start_drain
 add wave -noupdate -color "Green"   /tb_conv_accel_simple/dut/cu_drain_done
+add wave -noupdate -color "Orange"  /tb_conv_accel_simple/dut/cu_systolic_valid
+add wave -noupdate -color "Orange"  /tb_conv_accel_simple/dut/insert_nop_to_systolic
 
-add wave -noupdate -divider "Configuration & Counters"
+add wave -noupdate -divider "Configuration & Calculated Values"
 add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_control/cfg_N
 add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_control/cfg_K
 add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_control/dl_cfg_N
@@ -103,7 +119,6 @@ add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_con
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/current_kernel_width
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/current_kernel_height
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/result_size
-add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_control/load_column_index
 
 # ------------------------------------------------------------------------------
 # 3.3 DATA LOADING PATH
@@ -140,24 +155,66 @@ add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_reader/sram_p1_en
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/u_reader/sram_p1_addr
 
 add wave -noupdate -divider "═══════════════════ WINDOW STREAMER ═══════════════════"
-add wave -noupdate -color "Yellow" /tb_conv_accel_simple/dut/u_streamer/state
+add wave -noupdate -divider "Configuration"
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/cfg_N
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/cfg_K
+add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/N16
+add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/K16
+add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/row_bytes
+add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/col_bytes
+
 add wave -noupdate -divider "Kernel Loading"
 add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/u_streamer/start_load_kernel
 add wave -noupdate -color "Green" /tb_conv_accel_simple/dut/u_streamer/kernel_done
 add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/kernel_idx
+add wave -noupdate -color "White" /tb_conv_accel_simple/dut/u_streamer/ker_top
+add wave -noupdate -color "White" /tb_conv_accel_simple/dut/u_streamer/ker_left
+add wave -noupdate -color "White" /tb_conv_accel_simple/dut/u_streamer/ker_right
+add wave -noupdate -color "White" /tb_conv_accel_simple/dut/u_streamer/k_big
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/ker_row_start
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/ker_rows_total
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/ker_col_off
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/ker_len_bytes
+
 add wave -noupdate -divider "Window Streaming"
 add wave -noupdate -color "Magenta" /tb_conv_accel_simple/dut/u_streamer/start_stream_window
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/start_col
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/end_col
 add wave -noupdate -color "Green" /tb_conv_accel_simple/dut/u_streamer/window_done
-add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/col_cnt
-add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/row_cnt
+add wave -noupdate -color "White" /tb_conv_accel_simple/dut/u_streamer/img_is_top
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/img_row_start
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/img_rows_per_col
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/img_len_bytes
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/total_cols
+
+add wave -noupdate -divider "Control & State"
+add wave -noupdate -color "Yellow" /tb_conv_accel_simple/dut/u_streamer/main_busy
+add wave -noupdate -color "Yellow" /tb_conv_accel_simple/dut/u_streamer/mode_kernel
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/fetch_col
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/fetch_row
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/total_req_cnt
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/resp_cnt
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/req_limit
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/total_to_fetch_ker
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/total_to_fetch_img
+add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_streamer/buf_full
+
+add wave -noupdate -divider "Wavefront Streamer"
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/wave_tick
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/wave_limit
+add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_streamer/wave_ready
+add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/effective_len
+add wave -noupdate -color "White" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/effective_len_base
+add wave -noupdate -color "White" -radix signed /tb_conv_accel_simple/dut/u_streamer/oldest_needed
+
 add wave -noupdate -divider "Reader Interface"
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_streamer/reader_req_valid
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_streamer/reader_req_ready
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/u_streamer/reader_byte_addr
+add wave -noupdate -color "Cyan" -radix unsigned /tb_conv_accel_simple/dut/u_streamer/reader_len_bytes
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/u_streamer/reader_resp_valid
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/u_streamer/reader_resp_data
+
 add wave -noupdate -divider "Output Streams"
 add wave -noupdate -color "Orange" /tb_conv_accel_simple/dut/w_valid
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/w_data
@@ -188,7 +245,7 @@ add wave -noupdate -color "Yellow" -label "PE[0][3]" -radix hex /tb_conv_accel_s
 add wave -noupdate -color "Yellow" -label "PE[0][4]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[4]/pe_top_row/pe_inst/left_reg
 add wave -noupdate -color "Yellow" -label "PE[0][5]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[5]/pe_top_row/pe_inst/left_reg
 add wave -noupdate -color "Yellow" -label "PE[0][6]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[6]/pe_top_row/pe_inst/left_reg
-add wave -noupdate -color "Yellow" -label "PE[0][7]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[7]/pe_top_row/pe_inst/left_reg
+add wave -noupdate -color "Yellow" -label "PE[0][7]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[7]/pe_top_right/pe_inst/left_reg
 
 add wave -noupdate -divider "PE Inputs (Row 0)"
 add wave -noupdate -color "Cyan" -label "PE[0][0]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[0]/pe_00/pe_inst/top_reg
@@ -198,7 +255,18 @@ add wave -noupdate -color "Cyan" -label "PE[0][3]" -radix hex /tb_conv_accel_sim
 add wave -noupdate -color "Cyan" -label "PE[0][4]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[4]/pe_top_row/pe_inst/top_reg
 add wave -noupdate -color "Cyan" -label "PE[0][5]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[5]/pe_top_row/pe_inst/top_reg
 add wave -noupdate -color "Cyan" -label "PE[0][6]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[6]/pe_top_row/pe_inst/top_reg
-add wave -noupdate -color "Cyan" -label "PE[0][7]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[7]/pe_top_row/pe_inst/top_reg
+add wave -noupdate -color "Cyan" -label "PE[0][7]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[7]/pe_top_right/pe_inst/top_reg
+
+
+add wave -noupdate -divider "PE Inputs (Row 0)"
+add wave -noupdate -color "Cyan" -label "PE[7][0]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[0]/pe_left_col/pe_inst/left_reg
+add wave -noupdate -color "Cyan" -label "PE[7][1]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[1]/pe_inner/pe_inst/left_reg
+add wave -noupdate -color "Cyan" -label "PE[7][2]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[2]/pe_inner/pe_inst/left_reg
+add wave -noupdate -color "Cyan" -label "PE[7][3]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[3]/pe_inner/pe_inst/left_reg
+add wave -noupdate -color "Cyan" -label "PE[7][4]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[4]/pe_inner/pe_inst/left_reg
+add wave -noupdate -color "Cyan" -label "PE[7][5]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[5]/pe_inner/pe_inst/left_reg
+add wave -noupdate -color "Cyan" -label "PE[7][6]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[6]/pe_inner/pe_inst/left_reg
+add wave -noupdate -color "Cyan" -label "PE[7][7]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[7]/col[7]/pe_right_col/pe_inst/left_reg
 
 # ------------------------------------------------------------------------------
 # 3.5 WRITEBACK & DRAIN PATH
