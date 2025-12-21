@@ -6,7 +6,9 @@ The Control Unit orchestrates the 2D convolution operation on a systolic array a
 
 ## State Machine
 
-![[Pasted image 20251221044458.png]]
+<img width="362" height="728" alt="control-unit" src="https://github.com/user-attachments/assets/d77b7125-3bd5-4423-831d-8ef66e4e74d5" />
+
+
 
 | State               | Description                                         |
 | ------------------- | --------------------------------------------------- |
