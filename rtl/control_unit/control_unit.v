@@ -180,7 +180,7 @@ module control_unit #(
               load_column <= 1'b0;
           end
 
-          if (sa_input_rows_counter >= (cfg_N - (cfg_K - current_kernel_height)))
+          if (sa_input_rows_counter >= (cfg_N - (cfg_K - current_kernel_height)) - 1)
           begin
             sa_input_rows_counter <= 7'd0;
             sa_cols_counter <= sa_cols_counter + 1;
