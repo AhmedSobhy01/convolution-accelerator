@@ -13,25 +13,20 @@
     "dir::../rtl/sram0_wrapper.v",
     "dir::../rtl/sram1_wrapper.v",
     "dir::../data-loader-agu/designs/SRAM_64_1024_2_grid/src/memory_generator_sky130_64_1024_2.v",
-    "dir::../data-loader-agu/designs/SRAM_32_4096_1_grid/src/memory_generator_sky130_32_4096_1.v"
+    "dir::../data-loader-agu/designs/SRAM_32_4096_1_grid/src/memory_generator_sky130_32_4096_1.v",
+    "dir::../rtl/sram_blackbox.v"
   ],
   "EXTRA_LEFS": [
     "dir::../data-loader-agu/Python_scripts/macro_files/LEF/sky130_sram_1kbyte_1rw1r_32x256_8.lef",
-    "dir::../data-loader-agu/Python_scripts/macro_files/LEF/sky130_sram_2kbyte_1rw1r_32x512_8.lef",
-    "dir::../data-loader-agu/Python_scripts/macro_files/LEF/sky130_sram_1kbyte_1rw1r_8x1024_8.lef"
+    "dir::../data-loader-agu/Python_scripts/macro_files/LEF/sky130_sram_2kbyte_1rw1r_32x512_8.lef"
   ],
   "EXTRA_GDS_FILES": [
     "dir::../data-loader-agu/Python_scripts/macro_files/GDS/sky130_sram_1kbyte_1rw1r_32x256_8.gds",
-    "dir::../data-loader-agu/Python_scripts/macro_files/GDS/sky130_sram_2kbyte_1rw1r_32x512_8.gds",
-    "dir::../data-loader-agu/Python_scripts/macro_files/GDS/sky130_sram_1kbyte_1rw1r_8x1024_8.gds"
+    "dir::../data-loader-agu/Python_scripts/macro_files/GDS/sky130_sram_2kbyte_1rw1r_32x512_8.gds"
   ],
   "EXTRA_LIBS": [
     "dir::../data-loader-agu/Python_scripts/macro_files/LIB/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib",
-    "dir::../data-loader-agu/Python_scripts/macro_files/LIB/sky130_sram_2kbyte_1rw1r_32x512_8_TT_1p8V_25C.lib",
-    "dir::../data-loader-agu/Python_scripts/macro_files/LIB/sky130_sram_1kbyte_1rw1r_8x1024_8_TT_1p8V_25C.lib"
-  ],
-  "EXTRA_VERILOG_MODELS": [
-    "dir::../rtl/sram_blackbox.v"
+    "dir::../data-loader-agu/Python_scripts/macro_files/LIB/sky130_sram_2kbyte_1rw1r_32x512_8_TT_1p8V_25C.lib"
   ],
   "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
   "CLOCK_PORT": "clk",
@@ -40,10 +35,10 @@
   "FP_PDN_CORE_RING": true,
   "RUN_HEURISTIC_DIODE_INSERTION": true,
   "FP_SIZING": "absolute",
-  "DIE_AREA": "0 0 5000 2500",
-  "CORE_AREA": "50 50 4950 2450",
-  "FP_CORE_UTIL": 30,
-  "PL_TARGET_DENSITY_PCT": 35,
+  "DIE_AREA": "0 0 5000 4000",
+  "CORE_AREA": "50 50 4950 3950",
+  "FP_CORE_UTIL": 25,
+  "PL_TARGET_DENSITY_PCT": 30,
   "VDD_NETS": "vccd1",
   "GND_NETS": "vssd1",
   "VERILOG_POWER_DEFINE": "USE_POWER_PINS",
