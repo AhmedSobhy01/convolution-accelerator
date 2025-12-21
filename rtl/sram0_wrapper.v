@@ -1,13 +1,10 @@
 `timescale 1ns/1ps
-`define USE_POWER_PINS
 
 module sram0_1rw1r_64x1024_wrapper (
   input  wire         clk,
 
-  `ifdef USE_POWER_PINS
-    inout vccd1,
-    inout vssd1,
-  `endif
+  inout vccd1,
+  inout vssd1,
 
   // Port0 RW (active-high enables in your RTL)
   input  wire         p0_en,
@@ -29,10 +26,8 @@ module sram0_1rw1r_64x1024_wrapper (
   wire csb1 = ~p1_en;
 
   memory_generator_sky130_64_1024_2 u_sram0 (
-    `ifdef USE_POWER_PINS
-      .vccd1(vccd1),
-      .vssd1(vssd1),
-    `endif
+    .vccd1(vccd1),
+    .vssd1(vssd1),
 
     .clk0(clk),
     .csb0(csb0),

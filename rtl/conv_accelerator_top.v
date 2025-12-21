@@ -1,5 +1,4 @@
 `timescale 1ns/1ps
-`define USE_POWER_PINS
 
 module conv_accelerator_top #(
   parameter ADDR_W = 10,              // SRAM0 word address width (1024 words)
@@ -29,10 +28,8 @@ module conv_accelerator_top #(
   output wire [7:0]   tx_data,
   input  wire         tx_ready,
 
-  `ifdef USE_POWER_PINS
-    inout vccd1,
-    inout vssd1
-  `endif
+  inout vccd1,
+  inout vssd1
 );
 
   // Systolic Array Interface
@@ -318,10 +315,8 @@ module conv_accelerator_top #(
   // Input SRAM (64-bit wide)
   sram0_1rw1r_64x1024_wrapper u_sram0 (
     .clk(clk),
-    `ifdef USE_POWER_PINS
-      .vccd1(vccd1),
-      .vssd1(vssd1),
-    `endif
+    .vccd1(vccd1),
+    .vssd1(vssd1),
     .p0_en(sram0_p0_en),
     .p0_we(sram0_p0_we),
     .p0_addr(sram0_p0_addr),
@@ -338,10 +333,8 @@ module conv_accelerator_top #(
   // Port 1: Drain (Read Only used)
   sram1_1rw1r_32x4096_wrapper u_sram1 (
     .clk(clk),
-    `ifdef USE_POWER_PINS
-      .vccd1(vccd1),
-      .vssd1(vssd1),
-    `endif
+    .vccd1(vccd1),
+    .vssd1(vssd1),
     .p0_en(sram1_p0_en),
     .p0_we(sram1_p0_we),
     .p0_addr(sram1_p0_addr),
