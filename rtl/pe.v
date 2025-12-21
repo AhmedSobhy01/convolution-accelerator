@@ -13,7 +13,7 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
     reg [INPUT_WIDTH-1:0] top_reg;
     reg [INPUT_WIDTH-1:0] left_reg;
 
-    always @(negedge clk or posedge rst) begin
+    always @(negedge clk) begin
         if (rst) begin
             top_reg       <= 0;
             left_reg      <= 0;
