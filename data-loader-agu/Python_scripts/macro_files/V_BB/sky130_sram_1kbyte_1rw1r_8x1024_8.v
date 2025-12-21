@@ -20,7 +20,7 @@ module sky130_sram_1kbyte_1rw1r_8x1024_8(
   parameter ADDR_WIDTH = 10 ;
   parameter RAM_DEPTH = 1 << ADDR_WIDTH;
   // FIXME: This delay is arbitrary.
-  parameter DELAY = 3 ;
+  parameter DELAY = 0 ;
   parameter VERBOSE = 0 ; //Set to 0 to only display warnings
   parameter T_HOLD = 1 ; //Delay to hold dout value after posedge. Value is arbitrary
 
