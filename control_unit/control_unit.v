@@ -155,13 +155,13 @@ module control_unit #(
 
         WAIT_LOAD_K_TO_SA:
         begin
-          // Check immediately for done - removes 1 idle cycle
           if (done_loading_kernel_to_sa)
           begin
             sa_input_rows_counter <= 7'd0;
             sa_output_rows_counter <= 7'd0;
             sa_cols_counter <= 7'd0;
             systolic_data_valid <= 1'b0;
+            load_column <= 1'b1;
             state <= COMPUTE;
           end
         end
@@ -184,6 +184,9 @@ module control_unit #(
           begin
             sa_input_rows_counter <= 7'd0;
             sa_cols_counter <= sa_cols_counter + 1;
+            if (sa_cols_counter + 1 < max_columns) begin
+              load_column <= 1'b1;
+            end
           end
 
           // Stop loading columns when all columns are done
