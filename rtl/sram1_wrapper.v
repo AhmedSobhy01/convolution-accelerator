@@ -1,13 +1,10 @@
 `timescale 1ns/1ps
-`define USE_POWER_PINS
 
 module sram1_1rw1r_32x4096_wrapper (
   input  wire         clk,
 
-  `ifdef USE_POWER_PINS
-    inout vccd1,
-    inout vssd1,
-  `endif
+  inout vccd1,
+  inout vssd1,
 
   // Port0 RW
   input  wire         p0_en,
@@ -28,10 +25,8 @@ module sram1_1rw1r_32x4096_wrapper (
   wire csb1 = ~p1_en;
 
   memory_generator_sky130_32_4096_1 u_sram1 (
-    `ifdef USE_POWER_PINS
-      .vccd1(vccd1),
-      .vssd1(vssd1),
-    `endif
+    .vccd1(vccd1),
+    .vssd1(vssd1),
 
     .clk0(clk),
     .csb0(csb0),
