@@ -52,7 +52,7 @@ module control_unit #(
   reg [6:0] sa_cols_counter;             // Number of columns processed (max 64-K+1 = 63)
 
 
-  wire [6:0] max_columns = (cfg_N - {2'b0, cfg_K} + 7'd1);  // Max 64-2+1 = 63
+  wire [6:0] max_columns = (cfg_N - cfg_K + 1);  // Max 64-2+1 = 63
   wire [4:0] right_column_offset = (cfg_K % 2) == 0 ? (cfg_K>>1) : (cfg_K>>1) + 1;
   assign load_column_index = sa_cols_counter + ((kernel_index % 2 == 0) ? 7'd0 : {2'd0, right_column_offset});
 
@@ -64,34 +64,34 @@ module control_unit #(
   begin
     if (cfg_K <= SA_DIM)
     begin
-      current_kernel_width = cfg_K[3:0];
-      current_kernel_height = cfg_K[3:0];
+      current_kernel_width = cfg_K;
+      current_kernel_height = cfg_K;
     end
     else
     begin
       // Width calculation
       if (kernel_index % 2 == 0)
       begin
-        current_kernel_width = cfg_K[4:1];
+        current_kernel_width = (cfg_K >> 1);
       end
       else
       begin
-        current_kernel_width = (cfg_K[0]) ? (cfg_K[4:1] + 4'd1) : cfg_K[4:1];
+        current_kernel_width = (cfg_K % 2) ? ((cfg_K >> 1) + 1) : (cfg_K >> 1);
       end
 
       // Height calculation
       if (kernel_index < 2)
       begin
-        current_kernel_height = cfg_K[4:1];
+        current_kernel_height = (cfg_K >> 1);
       end
       else
       begin
-        current_kernel_height = (cfg_K[0]) ? (cfg_K[4:1] + 4'd1) : cfg_K[4:1];
+        current_kernel_height = (cfg_K % 2) ? ((cfg_K >> 1) + 1) : (cfg_K >> 1);
       end
     end
   end
 
-  wire [7:0] result_size = ({1'b0, cfg_N} - {3'b0, cfg_K} + 8'd1);
+  wire [7:0] result_size = (cfg_N - cfg_K + 1);
 
 
   always @(posedge clk or negedge rst_n)
@@ -180,7 +180,7 @@ module control_unit #(
               load_column <= 1'b0;
           end
 
-          if (sa_input_rows_counter >= (cfg_N - ({2'b0, cfg_K} - {3'b0, current_kernel_height})))
+          if (sa_input_rows_counter >= (cfg_N - (cfg_K - current_kernel_height)) - 1)
           begin
             sa_input_rows_counter <= 7'd0;
             sa_cols_counter <= sa_cols_counter + 1;
@@ -196,7 +196,7 @@ module control_unit #(
           end
 
           // handle systolic data valid signal
-          if (sa_input_rows_counter >= ({3'b0, current_kernel_height} - 7'd2) && dl_output_data_valid)
+          if (sa_input_rows_counter >= (current_kernel_height - 2) && dl_output_data_valid)
           begin
             systolic_data_valid <= 1'b1;
             sa_output_rows_counter <= 7'd0;
@@ -207,7 +207,7 @@ module control_unit #(
             sa_output_rows_counter <= sa_output_rows_counter + 1;
           end
 
-          if({1'b0, sa_output_rows_counter} >= (result_size - 8'd1))
+          if(sa_output_rows_counter >= (result_size - 1))
           begin
             systolic_data_valid <= 1'b0;
             sa_output_rows_counter <= 7'd0;
@@ -216,7 +216,7 @@ module control_unit #(
           // Exit condition: all columns processed and current column output complete
           if (sa_cols_counter >= max_columns && !systolic_data_valid)
           begin
-            if ({1'b0, kernel_index} < (total_kernel_parts - 3'd1))
+            if (kernel_index < (total_kernel_parts - 1))
             begin
               kernel_index <= kernel_index + 1;
               state <= LOAD_K_TO_SA;

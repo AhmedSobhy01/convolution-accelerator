@@ -1,4 +1,5 @@
 `timescale 1ns/1ps
+`define USE_POWER_PINS
 
 module conv_accelerator_top #(
   parameter ADDR_W = 10,              // SRAM0 word address width (1024 words)
@@ -26,10 +27,7 @@ module conv_accelerator_top #(
   // DRAM output stream (8-bit) <- SRAM1
   output wire         tx_valid,
   output wire [7:0]   tx_data,
-  input  wire         tx_ready,
-
-  inout vccd1,
-  inout vssd1
+  input  wire         tx_ready
 );
 
   // Systolic Array Interface
@@ -44,10 +42,13 @@ module conv_accelerator_top #(
   wire [7:0]   sa_out_data;
   wire         sa_wb_busy;     // Writeback buffer full
 
-
   // ============================================
   // Power Pins
   // ============================================
+  `ifdef USE_POWER_PINS
+    supply1 vccd1;
+    supply0 vssd1;
+  `endif
 
   // ============================================
   // Control Unit Signals
@@ -65,7 +66,6 @@ module conv_accelerator_top #(
   wire         cu_start_drain;
   wire         cu_drain_done;
   wire         cu_systolic_valid;
-  wire         window_done;
 
   // ============================================
   // SRAM0 Signals (Input Buffer)
@@ -247,7 +247,7 @@ module conv_accelerator_top #(
       sa_valid_pipe <= {sa_valid_pipe[SA_VALID_PIPE_DEPTH-2:0], (p_valid & w_valid)};
   end
 
-  assign sa_out_data = (sa_result > 32'hFF) ? 8'hFF : sa_result[7:0]; // Take lower 8 bits
+  assign sa_out_data = (sa_result > 32'hFF) ? 32'hFF : sa_result[7:0]; // Take lower 8 bits
 
   // ============================================
   // Writeback (SA -> SRAM1)
@@ -273,9 +273,9 @@ module conv_accelerator_top #(
   // Drain (SRAM1 -> DRAM)
   // ============================================
   // Calculate total pixels: (N-K+1) * (N-K+1)
-  wire [6:0] output_dim = cfg_N - {2'b0, cfg_K} + 7'd1;
+  wire [6:0] output_dim = cfg_N - cfg_K + 1;
   wire [13:0] total_pixels = {7'd0, output_dim} * {7'd0, output_dim};
-  wire cfg_split_mode = ({2'b0, cfg_K} > SA_DIM);
+  wire cfg_split_mode = (cfg_K > SA_DIM);
   dl_drain_stream #(
     .ADDR_W(SRAM1_ADDR_W)
   ) u_drain (
@@ -315,8 +315,10 @@ module conv_accelerator_top #(
   // Input SRAM (64-bit wide)
   sram0_1rw1r_64x1024_wrapper u_sram0 (
     .clk(clk),
-    .vccd1(vccd1),
-    .vssd1(vssd1),
+    `ifdef USE_POWER_PINS
+      .vccd1(vccd1),
+      .vssd1(vssd1),
+    `endif
     .p0_en(sram0_p0_en),
     .p0_we(sram0_p0_we),
     .p0_addr(sram0_p0_addr),
@@ -333,8 +335,10 @@ module conv_accelerator_top #(
   // Port 1: Drain (Read Only used)
   sram1_1rw1r_32x4096_wrapper u_sram1 (
     .clk(clk),
-    .vccd1(vccd1),
-    .vssd1(vssd1),
+    `ifdef USE_POWER_PINS
+      .vccd1(vccd1),
+      .vssd1(vssd1),
+    `endif
     .p0_en(sram1_p0_en),
     .p0_we(sram1_p0_we),
     .p0_addr(sram1_p0_addr),
