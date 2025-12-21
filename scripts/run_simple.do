@@ -178,7 +178,6 @@ add wave -noupdate -color "Yellow" -radix hex /tb_conv_accel_simple/dut/u_systol
 add wave -noupdate -divider "Array Internal State"
 add wave -noupdate -color "Cyan" -radix hex /tb_conv_accel_simple/dut/sa_result
 add wave -noupdate -color "Orange" -radix binary /tb_conv_accel_simple/dut/sa_valid_pipe
-add wave -noupdate -color "White" /tb_conv_accel_simple/dut/sa_accept_intput
 
 add wave -noupdate -divider "PE Weights (Row 0)"
 add wave -noupdate -color "Yellow" -label "PE[0][0]" -radix hex /tb_conv_accel_simple/dut/u_systolic_array/row[0]/col[0]/pe_00/pe_inst/left_reg

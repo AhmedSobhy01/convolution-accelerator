@@ -222,22 +222,13 @@ module conv_accelerator_top #(
   // Systolic Array (8x8)
   // ============================================
   wire [31:0] sa_result;
-  wire sa_accept_intput = clk && (p_valid || w_valid) ;
-
-  reg [63:0] p_data_delayed;
-  reg [63:0] w_data_delayed;
-  always @(negedge clk) begin
-    p_data_delayed <= p_data;
-    w_data_delayed <= w_data;
-  end
 
   systolic_array #(
     .DATA_WIDTH(32),
     .ARRAY_SIZE(SA_DIM),
     .INPUT_WIDTH(8)
   ) u_systolic_array (
-    .clk(sa_accept_intput),
-    // .rst(~rst_n),
+    .clk(clk),
     .rst(cu_start_load),
     .load_kernel_signal(w_valid),
     .input_in(p_data),
@@ -246,12 +237,13 @@ module conv_accelerator_top #(
   );
 
   // Generate output valid signal (delayed to match SA pipeline)
-  reg [SA_INPUT_FILL_TIME+SA_DIM-1:0] sa_valid_pipe;
+  localparam SA_VALID_PIPE_DEPTH = SA_INPUT_FILL_TIME + SA_DIM;
+  reg [SA_VALID_PIPE_DEPTH-1:0] sa_valid_pipe;
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
       sa_valid_pipe <= 0;
     else
-      sa_valid_pipe <= {sa_valid_pipe[SA_INPUT_FILL_TIME+SA_DIM-2:0], (p_valid & w_valid)};
+      sa_valid_pipe <= {sa_valid_pipe[SA_VALID_PIPE_DEPTH-2:0], (p_valid & w_valid)};
   end
 
   assign sa_out_data = (sa_result > 32'hFF) ? 32'hFF : sa_result[7:0]; // Take lower 8 bits
