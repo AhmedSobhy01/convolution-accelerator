@@ -61,7 +61,8 @@ def read_hex_file(filepath: Path) -> List[int]:
                 try:
                     values.append(int(line, 16))
                 except ValueError:
-                    print(f"  Warning: Invalid hex value '{line}' at line {line_num}")
+                    print(
+                        f"  Warning: Invalid hex value '{line}' at line {line_num}")
     return values
 
 
@@ -97,19 +98,19 @@ def generate_do_script(project_root: Path, test_num: int, output_do_file: Path) 
 vlib work
 vmap work work
 
-vlog -work work control_unit/control_unit.v
-vlog -work work data-loader-agu/src/dl_dma_rx.v
-vlog -work work data-loader-agu/src/byte_window_streamer.v
-vlog -work work data-loader-agu/src/kernel_window_streamer.v
-vlog -work work data-loader-agu/src/dl_sa_writeback.v
-vlog -work work data-loader-agu/src/dl_drain_stream.v
-vlog -work work data-loader-agu/src/simple_ram_models.v
-vlog -work work data-loader-agu/src/sram0_wrapper.v
-vlog -work work data-loader-agu/src/sram1_wrapper.v
-vlog -work work rtl/pe.v
-vlog -work work rtl/systolic_array.v
-vlog -work work conv_accelerator_top.v
-vlog -work work +define+TEST_CASE={test_num} tb/tb_conv_accel_simple.v
+vlog -work work rtl/control_unit/control_unit.v
+vlog -work work rtl/data-loader-agu/src/dl_dma_rx.v
+vlog -work work rtl/data-loader-agu/src/byte_window_streamer.v
+vlog -work work rtl/data-loader-agu/src/kernel_window_streamer.v
+vlog -work work rtl/data-loader-agu/src/dl_sa_writeback.v
+vlog -work work rtl/data-loader-agu/src/dl_drain_stream.v
+vlog -work work rtl/data-loader-agu/src/simple_ram_models.v
+vlog -work work rtl/data-loader-agu/src/sram0_wrapper.v
+vlog -work work rtl/data-loader-agu/src/sram1_wrapper.v
+vlog -work work rtl/systolic_array/pe.v
+vlog -work work rtl/systolic_array/systolic_array.v
+vlog -work work rtl/conv_accelerator_top.v
+vlog -work work +define+TEST_CASE={test_num} rtl/tb/tb_conv_accel_simple.v
 
 # 2. START SIMULATION
 vsim -c -voptargs=+acc work.tb_conv_accel_simple -GTEST_CASE={test_num}
@@ -126,7 +127,7 @@ quit -f
 
 def run_modelsim(project_root: Path, do_file: Path, verbose: bool = False) -> Tuple[bool, str]:
     # Try different ModelSim commands
-    modelsim_commands = ['vsim', 'questasim', 'modelsim']
+    modelsim_commands = ['vsim.exe', 'questasim', 'modelsim']
 
     cmd = None
     for msim_cmd in modelsim_commands:
@@ -254,7 +255,8 @@ def run_test_case(project_root: Path, test_num: int, verbose: bool = False) -> T
 
     print(f"  Comparing outputs...")
     try:
-        output_count, expected_count, matches, mismatches = compare_outputs(output_file, gold_file)
+        output_count, expected_count, matches, mismatches = compare_outputs(
+            output_file, gold_file)
     except Exception as e:
         return TestResult(
             test_num=test_num,
@@ -300,7 +302,8 @@ def run_test_case(project_root: Path, test_num: int, verbose: bool = False) -> T
         if mismatches and verbose:
             print(f"  First mismatches:")
             for idx, out_val, exp_val in mismatches[:5]:
-                print(f"    Index {idx}: got 0x{out_val:02X}, expected 0x{exp_val:02X}")
+                print(
+                    f"    Index {idx}: got 0x{out_val:02X}, expected 0x{exp_val:02X}")
 
     print(f"  Cycles: {cycles}")
     print(f"  Duration: {duration:.2f}s")
@@ -339,7 +342,7 @@ def print_summary(results: List[TestResult]) -> None:
             status_str = "\033[93mERROR\033[0m"   # Yellow
         else:
             skipped += 1
-            status_str = "\033[90mSKIPPED\033[0m" # Gray
+            status_str = "\033[90mSKIPPED\033[0m"  # Gray
 
         match_str = f"{r.matches}/{r.expected_count}" if r.expected_count > 0 else "N/A"
         cycles_str = str(r.cycles) if r.cycles > 0 else "N/A"
@@ -377,13 +380,15 @@ def save_results_to_file(results: List[TestResult], output_path: Path) -> None:
         f.write(f"  Errors:  {errors}\n\n")
 
         f.write("-"*75 + "\n")
-        f.write(f"{'Test':<5} {'Name':<25} {'Status':<10} {'Match':<15} {'Cycles':<12}\n")
+        f.write(
+            f"{'Test':<5} {'Name':<25} {'Status':<10} {'Match':<15} {'Cycles':<12}\n")
         f.write("-"*75 + "\n")
 
         for r in results:
             match_str = f"{r.matches}/{r.expected_count}" if r.expected_count > 0 else "N/A"
             cycles_str = str(r.cycles) if r.cycles > 0 else "N/A"
-            f.write(f"{r.test_num:<5} {r.test_name:<25} {r.status.value:<10} {match_str:<15} {cycles_str:<12}\n")
+            f.write(
+                f"{r.test_num:<5} {r.test_name:<25} {r.status.value:<10} {match_str:<15} {cycles_str:<12}\n")
             if r.error_message:
                 f.write(f"      Error: {r.error_message}\n")
 

@@ -19,10 +19,10 @@ module kernel_and_window_streamer #(
   input  wire [6:0]   window_col,
   output reg          window_done,
 
-  output reg          w_valid,
-  output reg  [63:0]  w_data,
-  output reg          p_valid,
-  output reg  [63:0]  p_data,
+  output wire         w_valid,
+  output wire [63:0]  w_data,
+  output wire         p_valid,
+  output wire [63:0]  p_data,
 
   output reg                      reader_req_valid,
   output reg  [BYTE_ADDR_W-1:0]   reader_byte_addr,
@@ -88,6 +88,22 @@ module kernel_and_window_streamer #(
     (!k_big) ? cfg_K[2:0] :
     (ker_right ? k_hi[2:0] : k_lo[2:0]);
 
+  assign w_valid = (state == LOAD_KERNEL) & reader_resp_valid;
+  assign p_valid = (state == STREAM_WIN)  & reader_resp_valid;
+  assign w_data = reader_resp_data;
+  assign p_data = reader_resp_data;
+
+  wire kernel_last =
+  reader_resp_valid &&
+  (state == LOAD_KERNEL) &&
+  (col_resp_cnt + 2'b10 == ker_rows_total);
+
+  wire window_last =
+    reader_resp_valid &&
+    (state == STREAM_WIN) &&
+    (row_resp_cnt + 2'b10 == img_rows_total);
+
+
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state <= IDLE;
@@ -98,40 +114,21 @@ module kernel_and_window_streamer #(
       reader_req_valid <= 1'b0;
       reader_byte_addr <= {BYTE_ADDR_W{1'b0}};
       reader_len_bytes <= 3'd0;
-      w_valid <= 1'b0;
-      w_data  <= 64'd0;
-      p_valid <= 1'b0;
-      p_data  <= 64'd0;
       kernel_done <= 1'b0;
       window_done <= 1'b0;
     end else begin
       // Default: deassert done flags
-      kernel_done <= 1'b0;
-      window_done <= 1'b0;
+      kernel_done <= kernel_last;
+      window_done <= window_last;
 
       // Capture responses (happens in parallel with request issuing)
       if (reader_resp_valid) begin
         if (state == LOAD_KERNEL) begin
-          w_valid <= 1'b1;
-          w_data  <= reader_resp_data;
           col_resp_cnt <= col_resp_cnt + 1'b1;
 
-          // Check if all responses received
-          if (col_resp_cnt + 1'b1 >= ker_rows_total) begin
-            kernel_done <= 1'b1;
-          end
         end else if (state == STREAM_WIN) begin
-          p_valid <= 1'b1;
-          p_data  <= reader_resp_data;
           row_resp_cnt <= row_resp_cnt + 1'b1;
-
-          if (row_resp_cnt + 1'b1 >= img_rows_total) begin
-            window_done <= 1'b1;
-          end
         end
-      end else begin
-        w_valid <= 1'b0;
-        p_valid <= 1'b0;
       end
 
       // State machine: issue requests
@@ -160,7 +157,7 @@ module kernel_and_window_streamer #(
           end else begin
             reader_req_valid <= 1'b0;
             // Wait for all responses, then go idle
-            if (col_resp_cnt >= ker_rows_total) begin
+            if (col_resp_cnt + 1 >= ker_rows_total) begin
               state <= IDLE;
             end
           end
@@ -175,7 +172,7 @@ module kernel_and_window_streamer #(
           end else begin
             reader_req_valid <= 1'b0;
             // Wait for all responses, then go idle
-            if (row_resp_cnt >= img_rows_total) begin
+            if (row_resp_cnt + 1 >= img_rows_total) begin
               state <= IDLE;
             end
           end

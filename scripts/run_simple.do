@@ -12,33 +12,33 @@ vlib work
 vmap work work
 
 echo "Compiling Control Unit..."
-vlog -work work control_unit/control_unit.v
-vlog -work work data-loader-agu/Python_scripts/macro_files/V_BB/sky130_sram_2kbyte_1rw1r_32x512_8.v
-vlog -work work data-loader-agu/Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_32x256_8.v
-vlog -work work data-loader-agu/Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_8x1024_8.v
-vlog -work work data-loader-agu/designs/SRAM_64_1024_2_grid/src/memory_generator_sky130_64_1024_2.v
-vlog -work work data-loader-agu/designs/SRAM_32_4096_1_grid/src/memory_generator_sky130_32_4096_1.v
+vlog -work work rtl/control_unit/control_unit.v
+vlog -work work rtl/data-loader-agu/Python_scripts/macro_files/V_BB/sky130_sram_2kbyte_1rw1r_32x512_8.v
+vlog -work work rtl/data-loader-agu/Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_32x256_8.v
+vlog -work work rtl/data-loader-agu/Python_scripts/macro_files/V_BB/sky130_sram_1kbyte_1rw1r_8x1024_8.v
+vlog -work work rtl/data-loader-agu/designs/SRAM_64_1024_2_grid/src/memory_generator_sky130_64_1024_2.v
+vlog -work work rtl/data-loader-agu/designs/SRAM_32_4096_1_grid/src/memory_generator_sky130_32_4096_1.v
 
 echo "Compiling Data Loader & AGU Modules..."
-vlog -work work data-loader-agu/src/dl_dma_rx.v
-vlog -work work data-loader-agu/src/byte_window_streamer.v
-vlog -work work data-loader-agu/src/kernel_window_streamer.v
-vlog -work work data-loader-agu/src/dl_sa_writeback.v
-vlog -work work data-loader-agu/src/dl_drain_stream.v
+vlog -work work rtl/data-loader-agu/src/dl_dma_rx.v
+vlog -work work rtl/data-loader-agu/src/byte_window_streamer.v
+vlog -work work rtl/data-loader-agu/src/kernel_window_streamer.v
+vlog -work work rtl/data-loader-agu/src/dl_sa_writeback.v
+vlog -work work rtl/data-loader-agu/src/dl_drain_stream.v
 
 echo "Compiling SRAM Wrappers..."
-vlog -work work data-loader-agu/src/sram0_wrapper.v
-vlog -work work data-loader-agu/src/sram1_wrapper.v
+vlog -work work rtl/data-loader-agu/src/sram0_wrapper.v
+vlog -work work rtl/data-loader-agu/src/sram1_wrapper.v
 
 echo "Compiling Systolic Array..."
-vlog -work work rtl/pe.v
-vlog -work work rtl/systolic_array.v
+vlog -work work rtl/systolic_array/pe.v
+vlog -work work rtl/systolic_array/systolic_array.v
 
 echo "Compiling Top Level..."
-vlog -work work conv_accelerator_top.v
+vlog -work work rtl/conv_accelerator_top.v
 
 echo "Compiling Testbench..."
-vlog -work work tb/tb_conv_accel_simple.v
+vlog -work work rtl/tb/tb_conv_accel_simple.v
 
 # ==============================================================================
 # 2. START SIMULATION
