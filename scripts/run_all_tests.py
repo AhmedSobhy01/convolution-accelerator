@@ -346,7 +346,7 @@ def print_summary(results: List[TestResult]) -> None:
         print(f"{r.test_num:<5} {r.test_name:<25} {status_str:<20} {match_str:<15} {cycles_str:<12} {r.duration:.2f}s")
 
         if r.error_message and r.status != TestStatus.PASSED:
-            print(f"      └─ {r.error_message}")
+            print(f"      -> {r.error_message}")
 
     print("-"*70)
     print(f"\nTotal: {len(results)} tests | "
