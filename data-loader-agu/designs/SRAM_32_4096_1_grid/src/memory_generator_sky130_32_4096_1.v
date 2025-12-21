@@ -109,8 +109,9 @@ generate
 			for(i = 0 ; i < NUM_SERIAL_MEMORIES; i=i+1) begin : WE_ASSIGN
 				assign bus_we[i] = ~((~web0) && (i == port0_address[NUM_BITS_SELECT_MEMORIES-1:0]));
 			end
-			assign port1_dataout = port1_bus_odata>>(port1_addr1_reg1*ALL_MEM_DATA_WIDTH);
-			assign port0_dataout = port0_bus_odata>>(port0_addr0_reg1*ALL_MEM_DATA_WIDTH);
+			// Use 1-stage register (reg) instead of 2-stage (reg1) for faster read latency
+			assign port1_dataout = port1_bus_odata>>(port1_addr1_reg*ALL_MEM_DATA_WIDTH);
+			assign port0_dataout = port0_bus_odata>>(port0_addr0_reg*ALL_MEM_DATA_WIDTH);
 			
 		end else begin
 		
@@ -122,15 +123,15 @@ generate
 		
 endgenerate
 
-  // All inputs are registers
+  // 1-stage register for bank select (reduced from 2-stage for faster latency)
   always @(posedge clk0) begin
 		port0_addr0_reg <= port0_address[NUM_BITS_SELECT_MEMORIES-1:0];
-		port0_addr0_reg1 <= port0_addr0_reg;
+		// port0_addr0_reg1 <= port0_addr0_reg;  // Removed 2nd stage
   end
 
   always @(posedge clk1) begin
 		port1_addr1_reg <= port1_address[NUM_BITS_SELECT_MEMORIES-1:0];
-		port1_addr1_reg1 <= port1_addr1_reg;
+		// port1_addr1_reg1 <= port1_addr1_reg;  // Removed 2nd stage
   end
 
 endmodule

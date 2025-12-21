@@ -32,7 +32,6 @@ add wave -hex sim:/tb_drain/tb_wdata
 add wave -hex sim:/tb_drain/tb_wmask
 add wave -hex sim:/tb_drain/dut/computed_pixel
 add wave -hex sim:/tb_drain/dut/state
-add wave -hex sim:/tb_drain/dut/pack_buf
 
 add wave -divider {DRAM Output}
 add wave -hex sim:/tb_drain/tx_valid
