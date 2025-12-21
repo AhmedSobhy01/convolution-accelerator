@@ -18,7 +18,8 @@ module tb_wave_streamer;
   reg start_load_kernel;
   reg [1:0] kernel_idx;
   reg start_stream_window;
-  reg [15:0] window_col;
+  reg [15:0] start_col;
+  reg [15:0] end_col;
   
   // Outputs from DUT
   wire kernel_done;
@@ -126,7 +127,8 @@ module tb_wave_streamer;
     .kernel_idx(kernel_idx),
     .kernel_done(kernel_done),
     .start_stream_window(start_stream_window),
-    .window_col(window_col),
+    .start_col(start_col),
+    .end_col(end_col),
     .window_done(window_done),
     .w_valid(w_valid),
     .w_data(w_data),
@@ -163,7 +165,8 @@ module tb_wave_streamer;
     start_load_kernel = 0;
     kernel_idx = 0;
     start_stream_window = 0;
-    window_col = 0;
+    start_col = 0;
+    end_col = 2;
     tb_we_active = 0;
     tb_sram_addr = 0;
     tb_sram_wdata = 0;
@@ -179,7 +182,7 @@ module tb_wave_streamer;
     #20;
     
     // 2. Start Streaming
-    $display("Starting Wavefront Stream Test (16x16, K=4)...");
+    $display("Starting Wavefront Stream Test (16x16, K=4, Cols 0-1)...");
     start_stream_window = 1;
     #10 start_stream_window = 0;
     
@@ -252,8 +255,12 @@ module tb_wave_streamer;
          
          // 1. Monitor Request
          if (dut_req_valid) begin
-             $display("%5d | REQ      | Addr=%d (Row %0d Part %0d), Len=%d", 
-                cyc, dut_req_addr, dut_req_addr/16, (dut_req_addr%16)/8, dut_req_len);
+             // Decode Addr back to logical Row/Col for verification
+             // Addr = Base + Col + Row*N
+             // Assuming Base=0, N=16.
+             // Col = Addr % 16. Row = Addr / 16.
+             $display("%5d | REQ      | Addr=%d (Row %0d Col %0d), Len=%d", 
+                cyc, dut_req_addr, dut_req_addr/16, dut_req_addr%16, dut_req_len);
          end
          
          // 2. Monitor Response
@@ -274,7 +281,7 @@ module tb_wave_streamer;
              stop_test = 1;
          end
          
-         if (cyc > 100) stop_test = 1;
+         if (cyc > 200) stop_test = 1;
          
          @(posedge clk);
          cyc = cyc + 1;
