@@ -2,6 +2,7 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
 (
     input wire clk,
     input wire rst,
+    input wire pe_enable,
     input wire load_kernel_signal,
     input wire [INPUT_WIDTH-1:0] in_top,
     input wire [INPUT_WIDTH-1:0] in_left,
@@ -16,11 +17,13 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
         if (rst) begin
             top_reg       <= 0;
             left_reg      <= 0;
-        end else if (load_kernel_signal) begin
-            top_reg     <= in_top;
-            left_reg    <= in_left;
-        end else begin
-            top_reg       <= in_top;
+        end else if (pe_enable) begin
+            if (load_kernel_signal) begin
+                top_reg     <= in_top;
+                left_reg    <= in_left;
+            end else begin
+                top_reg       <= in_top;
+            end
         end
     end
 
@@ -29,3 +32,4 @@ module pe #(parameter DATA_WIDTH = 32, parameter INPUT_WIDTH = 8)
     assign out_right   = left_reg;
 
 endmodule
+
