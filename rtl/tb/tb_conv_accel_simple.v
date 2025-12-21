@@ -2,6 +2,9 @@
 
 module tb_conv_accel_simple;
 
+  // Test case selection parameter
+  parameter TEST_CASE = 2;  // Default to test case 01
+
   // Clock and reset
   reg clk;
   reg rst_n;
@@ -20,7 +23,7 @@ module tb_conv_accel_simple;
   reg         rx_valid;
   wire        rx_ready;
   wire        tx_valid;
-  wire [31:0] tx_data;
+  wire [7:0]  tx_data;
   reg         tx_ready;
 
   // File reading variables
@@ -39,6 +42,12 @@ module tb_conv_accel_simple;
   // Output capture
   integer output_file;
   integer tx_word_count;
+
+  // Test case path construction
+  reg [1024*8-1:0] test_name;
+  reg [1024*8-1:0] config_path;
+  reg [1024*8-1:0] input_path;
+  reg [1024*8-1:0] kernel_path;
 
   // ============================================
   // DUT instantiation
@@ -69,9 +78,24 @@ module tb_conv_accel_simple;
   // ============================================
   // Clock generation
   // ============================================
+  integer cycle_count;
+
   initial begin
     clk = 0;
+    cycle_count = 0;
     forever #5 clk = ~clk;
+  end
+
+  reg counting;
+  initial begin
+    counting = 0;
+    @(posedge start);
+    counting = 1;
+  end
+
+  always @(posedge clk) begin
+    if (counting && !done)
+      cycle_count <= cycle_count + 1;
   end
 
   // ============================================
@@ -210,7 +234,6 @@ module tb_conv_accel_simple;
   // ============================================
   initial begin : output_capture
     integer pixel_count;
-    integer pixels_remaining;
 
     tx_ready = 1'b1;
     tx_word_count = 0;
@@ -223,38 +246,14 @@ module tb_conv_accel_simple;
     forever begin
       @(posedge clk);
       if (tx_valid && tx_ready) begin
-        pixels_remaining = cfg_output_size - pixel_count;
 
-        if (pixels_remaining > 0) begin
-          $fwrite(output_file, "%c%c\n",
-            hex_char(tx_data[7:4]),
-            hex_char(tx_data[3:0]));
+        $fwrite(output_file, "%c%c\n",
+          hex_char(tx_data[7:4]),
+          hex_char(tx_data[3:0]));
           pixel_count = pixel_count + 1;
-        end
 
-        if (pixels_remaining > 1) begin
-          $fwrite(output_file, "%c%c\n",
-            hex_char(tx_data[15:12]),
-            hex_char(tx_data[11:8]));
-          pixel_count = pixel_count + 1;
-        end
-
-        if (pixels_remaining > 2) begin
-          $fwrite(output_file, "%c%c\n",
-            hex_char(tx_data[23:20]),
-            hex_char(tx_data[19:16]));
-          pixel_count = pixel_count + 1;
-        end
-
-        if (pixels_remaining > 3) begin
-          $fwrite(output_file, "%c%c\n",
-            hex_char(tx_data[31:28]),
-            hex_char(tx_data[27:24]));
-          pixel_count = pixel_count + 1;
-        end
-
-        $display("[%0t] TX: %02X %02X %02X %02X (word %0d, pixels written: %0d)", $time,
-                 tx_data[7:0], tx_data[15:8], tx_data[23:16], tx_data[31:24], tx_word_count, pixel_count);
+        $display("[%0t] TX: %02X (byte %0d, pixels written: %0d)", $time,
+                 tx_data, tx_word_count, pixel_count);
         tx_word_count = tx_word_count + 1;
       end
 
@@ -292,16 +291,43 @@ module tb_conv_accel_simple;
     $display("Convolution Accelerator Test");
     $display("========================================");
 
-    load_config_file("./tb/config.txt");
+    // Construct test case paths based on TEST_CASE parameter
+    case (TEST_CASE)
+      1:  test_name = "01_Basic_Minimal";
+      2:  test_name = "02_Basic_Identity";
+      3:  test_name = "03_Basic_AllOnes";
+      4:  test_name = "04_Regular_Standard";
+      5:  test_name = "05_Regular_LargeHalo";
+      6:  test_name = "06_Regular_PingPong";
+      7:  test_name = "07_Adv_MaxSpec";
+      8:  test_name = "08_Adv_Throughput";
+      9:  test_name = "09_Pro_PartialTile";
+      10: test_name = "10_Pro_Saturation";
+      default: begin
+        $display("ERROR: Invalid TEST_CASE=%0d. Valid range is 1-10.", TEST_CASE);
+        $finish;
+      end
+    endcase
+
+    $sformat(config_path, "./test_cases/%0s_config.txt", test_name);
+    $sformat(input_path, "./test_cases/%0s_in.hex", test_name);
+    $sformat(kernel_path, "./test_cases/%0s_weight.hex", test_name);
+
+    $display("Running test case: %0s", test_name);
+    $display("Config:  %0s", config_path);
+    $display("Input:   %0s", input_path);
+    $display("Kernel:  %0s", kernel_path);
+
+    load_config_file(config_path);
     cfg_N = parsed_n[6:0];
     cfg_K = parsed_k[4:0];
     cfg_output_size = parsed_output_size[15:0];
 
     $display("Configuration: N=%0d, K=%0d, Expected Output Size=%0d", cfg_N, cfg_K, cfg_output_size);
 
-    load_input_file("./tb/input.hex");
+    load_input_file(input_path);
 
-    load_kernel_file("./tb/kernel.hex");
+    load_kernel_file(kernel_path);
 
     // Start convolution
     $display("\n[%0t] Starting convolution operation", $time);
@@ -317,18 +343,35 @@ module tb_conv_accel_simple;
     $display("\n========================================");
     $display("TEST COMPLETED SUCCESSFULLY");
     $display("========================================");
+    $display("Total cycles: %0d", cycle_count);
     $display("Expected output size: %0d x %0d = %0d pixels",
              cfg_N - cfg_K + 1, cfg_N - cfg_K + 1,
              (cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1));
-    $display("Expected TX words: %0d (4 pixels per word)",
-             ((cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1)) / 4);
+    $display("Expected TX bytes: %0d (1 pixel per byte)",
+             (cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1));
 
     $finish;
   end
 
+  initial begin
+    @(posedge start);
+    forever begin
+      #10000;
+      $display("[%0t] DEBUG: CU_state=%0d, kernel_done=%b, window_done=%b, load_kernel=%b, load_column=%b, drain_start=%b, drain_done=%b",
+               $time,
+               dut.u_control.state,
+               dut.u_streamer.kernel_done,
+               dut.u_streamer.window_done,
+               dut.u_control.load_kernel,
+               dut.u_control.load_column,
+               dut.u_control.start_sending_output_to_dram,
+               dut.u_drain.done);
+    end
+  end
+
   // Timeout watchdog
   initial begin
-    #50000;
+    #500000;
     $display("ERROR: Simulation timeout!");
     $finish;
   end
