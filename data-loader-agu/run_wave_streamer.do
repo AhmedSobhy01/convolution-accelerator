@@ -41,16 +41,27 @@ vsim -voptargs=+acc work.tb_wave_streamer
 add wave -noupdate -divider "TB Signals"
 add wave -noupdate -radix hexadecimal /tb_wave_streamer/clk
 add wave -noupdate -radix hexadecimal /tb_wave_streamer/rst_n
+
+add wave -noupdate -divider "Configuration"
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/cfg_N
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/cfg_K
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/start_col
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/end_col
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/total_to_fetch_img
+
+add wave -noupdate -divider "Streamer Outputs"
 add wave -noupdate -radix hexadecimal /tb_wave_streamer/p_valid
 add wave -noupdate -radix hexadecimal /tb_wave_streamer/p_data
 add wave -noupdate -radix hexadecimal /tb_wave_streamer/dut_req_valid
 add wave -noupdate -radix hexadecimal /tb_wave_streamer/dut_resp_valid
 
-add wave -noupdate -divider "Internal Buffer"
-add wave -noupdate -radix hexadecimal /tb_wave_streamer/dut/row_buf
-add wave -noupdate -radix unsigned /tb_wave_streamer/dut/wave_tick
-add wave -noupdate -radix unsigned /tb_wave_streamer/dut/req_cnt
+add wave -noupdate -divider "Internal State"
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/fetch_col
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/fetch_row
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/total_req_cnt
 add wave -noupdate -radix unsigned /tb_wave_streamer/dut/resp_cnt
+add wave -noupdate -radix unsigned /tb_wave_streamer/dut/wave_tick
+add wave -noupdate -radix hexadecimal /tb_wave_streamer/dut/row_buf
 
 add wave -noupdate -divider "SRAM Interface"
 add wave -noupdate -radix hexadecimal /tb_wave_streamer/reader_sram_p0_addr
