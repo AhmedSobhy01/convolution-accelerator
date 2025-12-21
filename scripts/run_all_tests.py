@@ -294,9 +294,9 @@ def run_test_case(project_root: Path, test_num: int, verbose: bool = False) -> T
     )
 
     if status == TestStatus.PASSED:
-        print(f"  ✓ PASSED ({matches}/{expected_count} values match)")
+        print(f"  [PASS] ({matches}/{expected_count} values match)")
     else:
-        print(f"  ✗ FAILED: {error_msg}")
+        print(f"  [FAIL]: {error_msg}")
         if mismatches and verbose:
             print(f"  First mismatches:")
             for idx, out_val, exp_val in mismatches[:5]:
