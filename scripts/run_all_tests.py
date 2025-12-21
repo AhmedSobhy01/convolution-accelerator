@@ -27,6 +27,7 @@ class TestResult:
     mismatches: int
     error_message: str = ""
     duration: float = 0.0
+    cycles: int = 0
 
 
 TEST_CASES = {
@@ -62,6 +63,14 @@ def read_hex_file(filepath: Path) -> List[int]:
                 except ValueError:
                     print(f"  Warning: Invalid hex value '{line}' at line {line_num}")
     return values
+
+
+def extract_cycle_count(sim_output: str) -> int:
+    import re
+    match = re.search(r'Total cycles:\s*(\d+)', sim_output)
+    if match:
+        return int(match.group(1))
+    return 0
 
 
 def compare_outputs(output_file: Path, expected_file: Path) -> Tuple[int, int, int, List[Tuple[int, int, int]]]:
@@ -210,7 +219,10 @@ def run_test_case(project_root: Path, test_num: int, verbose: bool = False) -> T
     generate_do_script(project_root, test_num, do_file)
 
     print(f"  Running simulation...")
-    success, output = run_modelsim(project_root, do_file, verbose)
+    success, sim_output = run_modelsim(project_root, do_file, verbose)
+
+    # Extract cycle count from simulation output
+    cycles = extract_cycle_count(sim_output)
 
     if not success:
         return TestResult(
@@ -221,8 +233,9 @@ def run_test_case(project_root: Path, test_num: int, verbose: bool = False) -> T
             expected_count=0,
             matches=0,
             mismatches=0,
-            error_message=f"Simulation failed: {output[:500]}",
-            duration=time.time() - start_time
+            error_message=f"Simulation failed: {sim_output[:500]}",
+            duration=time.time() - start_time,
+            cycles=cycles
         )
 
     output_file = project_root / "output_data.txt"
@@ -276,7 +289,8 @@ def run_test_case(project_root: Path, test_num: int, verbose: bool = False) -> T
         matches=matches,
         mismatches=len(mismatches),
         error_message=error_msg,
-        duration=duration
+        duration=duration,
+        cycles=cycles
     )
 
     if status == TestStatus.PASSED:
@@ -288,6 +302,7 @@ def run_test_case(project_root: Path, test_num: int, verbose: bool = False) -> T
             for idx, out_val, exp_val in mismatches[:5]:
                 print(f"    Index {idx}: got 0x{out_val:02X}, expected 0x{exp_val:02X}")
 
+    print(f"  Cycles: {cycles}")
     print(f"  Duration: {duration:.2f}s")
 
     try:
@@ -304,8 +319,8 @@ def print_summary(results: List[TestResult]) -> None:
     print("                           TEST RESULTS SUMMARY")
     print("="*80)
 
-    print(f"\n{'Test':<5} {'Name':<25} {'Status':<10} {'Match':<15} {'Duration':<10}")
-    print("-"*70)
+    print(f"\n{'Test':<5} {'Name':<25} {'Status':<10} {'Match':<15} {'Cycles':<12} {'Duration':<10}")
+    print("-"*85)
 
     passed = 0
     failed = 0
@@ -327,7 +342,8 @@ def print_summary(results: List[TestResult]) -> None:
             status_str = "\033[90mSKIPPED\033[0m" # Gray
 
         match_str = f"{r.matches}/{r.expected_count}" if r.expected_count > 0 else "N/A"
-        print(f"{r.test_num:<5} {r.test_name:<25} {status_str:<20} {match_str:<15} {r.duration:.2f}s")
+        cycles_str = str(r.cycles) if r.cycles > 0 else "N/A"
+        print(f"{r.test_num:<5} {r.test_name:<25} {status_str:<20} {match_str:<15} {cycles_str:<12} {r.duration:.2f}s")
 
         if r.error_message and r.status != TestStatus.PASSED:
             print(f"      └─ {r.error_message}")
@@ -360,17 +376,18 @@ def save_results_to_file(results: List[TestResult], output_path: Path) -> None:
         f.write(f"  Failed:  {failed}\n")
         f.write(f"  Errors:  {errors}\n\n")
 
-        f.write("-"*60 + "\n")
-        f.write(f"{'Test':<5} {'Name':<25} {'Status':<10} {'Match':<15}\n")
-        f.write("-"*60 + "\n")
+        f.write("-"*75 + "\n")
+        f.write(f"{'Test':<5} {'Name':<25} {'Status':<10} {'Match':<15} {'Cycles':<12}\n")
+        f.write("-"*75 + "\n")
 
         for r in results:
             match_str = f"{r.matches}/{r.expected_count}" if r.expected_count > 0 else "N/A"
-            f.write(f"{r.test_num:<5} {r.test_name:<25} {r.status.value:<10} {match_str:<15}\n")
+            cycles_str = str(r.cycles) if r.cycles > 0 else "N/A"
+            f.write(f"{r.test_num:<5} {r.test_name:<25} {r.status.value:<10} {match_str:<15} {cycles_str:<12}\n")
             if r.error_message:
                 f.write(f"      Error: {r.error_message}\n")
 
-        f.write("-"*60 + "\n")
+        f.write("-"*75 + "\n")
 
 
 def main():

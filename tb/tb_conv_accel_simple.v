@@ -78,9 +78,24 @@ module tb_conv_accel_simple;
   // ============================================
   // Clock generation
   // ============================================
+  integer cycle_count;
+
   initial begin
     clk = 0;
+    cycle_count = 0;
     forever #5 clk = ~clk;
+  end
+
+  reg counting;
+  initial begin
+    counting = 0;
+    @(posedge start);
+    counting = 1;
+  end
+
+  always @(posedge clk) begin
+    if (counting && !done)
+      cycle_count <= cycle_count + 1;
   end
 
   // ============================================
@@ -328,6 +343,7 @@ module tb_conv_accel_simple;
     $display("\n========================================");
     $display("TEST COMPLETED SUCCESSFULLY");
     $display("========================================");
+    $display("Total cycles: %0d", cycle_count);
     $display("Expected output size: %0d x %0d = %0d pixels",
              cfg_N - cfg_K + 1, cfg_N - cfg_K + 1,
              (cfg_N - cfg_K + 1) * (cfg_N - cfg_K + 1));
