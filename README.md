@@ -95,61 +95,29 @@ Final output = sum of all partial contributions
 ```
 convolution-accelerator/
 ├── rtl/                           # RTL Design Files (Verilog)
-│   ├── conv_accelerator_top.v    # Top-level module
+│   ├── conv_accelerator_top.v     # Top-level module
 │   ├── control_unit/              # FSM-based control unit
-│   │   ├── control_unit.v
-│   │   ├── tb_control_unit.v
-│   │   └── run_tb.do
 │   ├── data-loader-agu/           # Data loader and AGU
 │   │   ├── src/                   # Core streaming modules
-│   │   │   ├── byte_window_streamer.v
-│   │   │   ├── kernel_window_streamer.v
-│   │   │   ├── dl_dma_rx.v
-│   │   │   ├── dl_sa_writeback.v
-│   │   │   ├── dl_drain_stream.v
-│   │   │   └── ...
 │   │   ├── Python_scripts/        # Helper scripts for memory generation
 │   │   └── designs/               # SRAM design files
 │   ├── systolic_array/            # Systolic array implementation
 │   │   ├── pe.v                   # Processing element
 │   │   └── systolic_array.v       # 8×8 array
 │   └── tb/                        # Testbenches
-│       ├── systolic_array_tb.v
-│       ├── pe_tb.v
-│       └── tb_conv_accel_simple.v
 │
 ├── config/                        # Configuration files
-│   ├── config.json               # Design parameters
-│   └── macro_placement.cfg       # Placement configuration
+│   ├── config.json                # Design parameters
+│   └── macro_placement.cfg        # Placement configuration
 │
 ├── docs/                          # Documentation
-│   ├── Comprehensive_Architecture.md
-│   ├── Convolution Accelerator.md
-│   ├── Control Unit.md
-│   ├── Memory Organization.md
-│   ├── Metrics.md
-│   ├── Team_Contributions.md
-│   └── Systolic Array/
-│       ├── 101.md
-│       └── DiP.md
 │
-├── scripts/                       # Simulation and testing scripts
-│   ├── run_all_tests.py
-│   ├── run_simple.do             # ModelSim script
-│   ├── verify.sh
-│   ├── verify_gls.sh
-│   ├── check.sh
-│   └── ...
+├── scripts/                       # Testing scripts
 │
 ├── test_cases/                    # Test configurations
-│   ├── 01_Basic_Minimal_config.txt
-│   ├── 02_Basic_Identity_config.txt
-│   ├── ...
-│   └── 10_Pro_Saturation_config.txt
+│   ├── 01 -> 10
 │
-| sim/                           # Simulation scripts
-    ├── pe_sim.do
-    └── systolic_array_sim.do
+├── sim/                           # Simulation scripts
 ```
 
 ---
