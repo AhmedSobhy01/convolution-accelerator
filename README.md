@@ -323,4 +323,80 @@ This project implements concepts from CNN accelerator literature, including:
 - Systolic array design principles
 - Dataflow mapping techniques for convolution
 - Memory hierarchy optimization for embedded systems
+
 ---
+## Team Contributions
+
+
+<table align="center">
+<tr>
+  <td align = "center"> 
+	<a href = "https://github.com/AhmedSobhy01">
+	  <img src = "https://github.com/AhmedSobhy01.png" width = 100>
+	  <br />
+	  <sub> Ahmed Sobhy </sub>
+	</a>
+  </td>
+
+  <td align = "center"> 
+	<a href = "https://github.com/AhmedAmrNabil">
+	  <img src = "https://github.com/AhmedAmrNabil.png" width = 100>
+	  <br />
+	  <sub> AhmedAmrNabil </sub>
+	</a>
+  </td>
+  
+  <td align = "center"> 
+	<a href = "https://github.com/ahmedfathy0-0">
+	  <img src = "https://github.com/ahmedfathy0-0.png" width = 100>
+	  <br />
+	  <sub> Ahmed Fathy </sub>
+	</a>
+  </td>
+
+  <td align = "center"> 
+	<a href = "https://github.com/ZiadMontaser">
+	  <img src = "https://github.com/ZiadMontaser.png" width = 100>
+	  <br />
+	  <sub> Ziad Montaser</sub>
+	</a>
+  </td>
+</tr>
+</table>
+
+<table align="center">
+<tr>
+
+  <td align = "center"> 
+	<a href = "https://github.com/Tasneemmohammed0">
+	  <img src = "https://github.com/Tasneemmohammed0.png" width = 100>
+	  <br />
+	  <sub> Tasneem Mohamed </sub>
+	</a>
+  </td>
+  
+  <td align = "center"> 
+	<a href = "https://github.com/habibayman">
+	  <img src = "https://github.com/habibayman.png" width = 100>
+	  <br />
+	  <sub> Habiba Ayman </sub>
+	</a>
+  </td>
+  <td align = "center"> 
+	<a href = "https://github.com/tonynagyy">
+	  <img src = "https://github.com/tonynagyy.png" width = 100>
+	  <br />
+	  <sub> Tony Nagy </sub>
+	</a>
+  </td>
+
+  <td align = "center"> 
+	<a href = "https://github.com/HelanaNady">
+	  <img src = "https://github.com/HelanaNady.png" width = 100>
+	  <br />
+	  <sub> Helana Nady</sub>
+	</a>
+  </td>
+</tr>
+</table>
+
