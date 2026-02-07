@@ -11,6 +11,7 @@ A high-performance hardware accelerator for 2D convolution operations, designed 
 - [Getting Started](#getting-started)
 - [Design Specifications](#design-specifications)
 - [Documentation](#documentation)
+- [Future Work](#future-work)
 - [Team Contributions](#team-contributions)
 
 ---
@@ -297,6 +298,23 @@ For detailed information, refer to the documentation files:
 - **[Systolic Array Documentation](docs/Systolic%20Array/)** - Detailed PE and array specifications
 - **[Metrics.md](docs/Metrics.md)** - PPA (Power, Performance, Area) results
 - **[Team_Contributions.md](docs/Team_Contributions.md)** - Team member roles and module ownership
+
+---
+## Future Work
+The team is currently looking into 2 other implementations that are excpected to improve the performance metrices even more.
+
+1) DiP Architechured systollic arrays\
+Referenced from this paper: https://arxiv.org/pdf/2412.09709 \
+current work can be found in this branch: [feat/sa-dip](https://github.com/AhmedSobhy01/convolution-accelerator/tree/feat/sa-dip)\
+It basically works by eliminating the input/output synchronization FIFOs required by state-of-the-art weight stationary systolic arrays by adopting diagonal input movement and weight permutation.
+
+<img width="972" height="376" alt="image" src="https://github.com/user-attachments/assets/8ad57cc0-8df7-4c68-a79b-4e44ea5b25ac" />
+
+
+
+2) A slight timinng adjustment on the current 101 implemetation\
+Inspired after reading this article: https://telesens.co/2018/07/30/systolic-architectures \
+current work progress can be found in this branch: [feat/sa-101-optimized](https://github.com/AhmedSobhy01/convolution-accelerator/tree/feat/sa-101-optimized)
 
 ---
 ## References
