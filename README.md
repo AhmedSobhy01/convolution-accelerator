@@ -269,9 +269,9 @@ For detailed information, refer to the documentation files:
 
 ---
 ## Future Work
-The team is currently looking into 2 other implementations that are excpected to improve the performance metrices even more.
+The team is currently looking into 2 other implementations that are expected to improve the performance metrics even more.
 
-1) DiP Architechured systollic arrays\
+1) DiP Architectured systolic arrays\
 Referenced from this paper: https://arxiv.org/pdf/2412.09709 \
 current work can be found in this branch: [feat/sa-dip](https://github.com/AhmedSobhy01/convolution-accelerator/tree/feat/sa-dip)\
 It basically works by eliminating the input/output synchronization FIFOs required by state-of-the-art weight stationary systolic arrays by adopting diagonal input movement and weight permutation.
@@ -279,7 +279,7 @@ It basically works by eliminating the input/output synchronization FIFOs require
 <img width="972" height="376" alt="image" src="https://github.com/user-attachments/assets/d5592bb5-2dff-4ace-ac4c-eb53c3a64df5" />
 
 
-2) A slight timinng adjustment on the current 101 implemetation\
+2) A slight timing adjustment on the current 101 implementation\
 Inspired after reading this article: https://telesens.co/2018/07/30/systolic-architectures \
 current work progress can be found in this branch: [feat/sa-101-optimized](https://github.com/AhmedSobhy01/convolution-accelerator/tree/feat/sa-101-optimized)
 
