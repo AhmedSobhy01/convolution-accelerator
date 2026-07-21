@@ -57,6 +57,9 @@ module dl_drain_stream #(
   reg [9:0] sum_temp;
 
   always @(*) begin
+    // Default assignments prevent inferred latches (all paths drive both signals)
+    sum_temp       = 10'd0;
+    computed_pixel = 8'd0;
     if (cfg_split_mode) begin
       sum_temp = sram_rdata[7:0] + sram_rdata[15:8] + sram_rdata[23:16] + sram_rdata[31:24];
       computed_pixel = (sum_temp > 10'd255) ? 8'hFF : sum_temp[7:0];

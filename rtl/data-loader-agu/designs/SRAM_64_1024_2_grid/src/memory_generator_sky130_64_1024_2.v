@@ -1,7 +1,9 @@
 module memory_generator_sky130_64_1024_2 #(parameter ALL_MEM_DATA_WIDTH = 64, parameter ALL_MEM_NUM_ADDRESSES = 1024, parameter MEM_TYPE = 2 /*0 = 8x1024, 1 = 32x256, 2 = 32x512 */)(
 // Port0 signals
+`ifdef USE_POWER_PINS
 	inout vccd1,
 	inout vssd1,
+`endif
 	input clk0,
 	input csb0,
 	input web0,
@@ -45,8 +47,10 @@ generate
 		for(j=0; j < NUM_PARALLEL_MEMORIES; j=j+1) begin: PARALLEL_MEMORY
 			if(SINGLE_MEM_DATA_WIDTH == 32 && SINGLE_MEM_NUM_ADDRESSES == 512) begin // 32x512 memory type
 				sky130_sram_2kbyte_1rw1r_32x512_8 sky130_sram_2kbyte_1rw1r_32x512_8_i (
+					 `ifdef USE_POWER_PINS
 					 .vccd1(vccd1),
 					 .vssd1(vssd1),
+					 `endif
 					 .clk0(clk0),
 					 .csb0(csb0),
 					 .web0(bus_we[i]),
@@ -61,8 +65,10 @@ generate
 				);
 			end else if(SINGLE_MEM_DATA_WIDTH == 32 && SINGLE_MEM_NUM_ADDRESSES == 256) begin // 32x256 memory type
 				sky130_sram_1kbyte_1rw1r_32x256_8 sky130_sram_1kbyte_1rw1r_32x256_8_i (
+					 `ifdef USE_POWER_PINS
 					 .vccd1(vccd1),
 					 .vssd1(vssd1),
+					 `endif
 					 .clk0(clk0),
 					 .csb0(csb0),
 					 .web0(bus_we[i]),
@@ -77,8 +83,10 @@ generate
 				);
 			end else begin // 8x1024 memory type
 				sky130_sram_1kbyte_1rw1r_8x1024_8 sky130_sram_1kbyte_1rw1r_8x1024_8_i (
+					 `ifdef USE_POWER_PINS
 					 .vccd1(vccd1),
 					 .vssd1(vssd1),
+					 `endif
 					 .clk0(clk0),
 					 .csb0(csb0),
 					 .web0(bus_we[i]),

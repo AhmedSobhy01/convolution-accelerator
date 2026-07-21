@@ -1,5 +1,4 @@
 `timescale 1ns/1ps
-`define USE_POWER_PINS
 
 module conv_accelerator_top #(
   parameter ADDR_W = 10,              // SRAM0 word address width (1024 words)
@@ -28,6 +27,11 @@ module conv_accelerator_top #(
   output wire         tx_valid,
   output wire [7:0]   tx_data,
   input  wire         tx_ready
+`ifdef USE_POWER_PINS
+  ,
+  inout wire          vccd1,          // Power  (connected to PDN via VDD_NETS)
+  inout wire          vssd1           // Ground (connected to PDN via GND_NETS)
+`endif
 );
 
   // Systolic Array Interface
@@ -45,10 +49,10 @@ module conv_accelerator_top #(
   // ============================================
   // Power Pins
   // ============================================
-  `ifdef USE_POWER_PINS
-    supply1 vccd1;
-    supply0 vssd1;
-  `endif
+  // vccd1/vssd1 are top-level inout ports (declared in the port list under
+  // USE_POWER_PINS) and are hooked to the power grid by OpenLane via
+  // VDD_NETS/GND_NETS. They must not be supply0/supply1 constants, otherwise
+  // the SRAM macro power inouts get driven by constants (flatten error).
 
   // ============================================
   // Control Unit Signals
@@ -66,6 +70,7 @@ module conv_accelerator_top #(
   wire         cu_start_drain;
   wire         cu_drain_done;
   wire         cu_systolic_valid;
+  wire         window_done;      // streamer -> control unit column-load handshake
 
   // ============================================
   // SRAM0 Signals (Input Buffer)

@@ -1,5 +1,4 @@
 `timescale 1ns/1ps
-`define USE_POWER_PINS
 
 module sram1_1rw1r_32x4096_wrapper (
   input  wire         clk,
