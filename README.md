@@ -1,6 +1,6 @@
 # Convolution Accelerator
 
-A high-performance hardware accelerator for 2D convolution operations, designed as part of the **CMP3020 – VLSI course**. This project implements a streaming coprocessor architecture that efficiently performs convolution operations under tight on-chip memory constraints.
+A high-performance hardware accelerator for 2D convolution operations, designed as part of the **CMP3020 VLSI course**. This project implements a streaming coprocessor architecture that efficiently performs convolution operations under tight on-chip memory constraints.
 
 ## 📋 Table of Contents
 
@@ -9,6 +9,7 @@ A high-performance hardware accelerator for 2D convolution operations, designed 
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
+- [Physical Implementation (RTL-to-GDS)](#physical-implementation-rtl-to-gds)
 - [Design Specifications](#design-specifications)
 - [Documentation](#documentation)
 - [Future Work](#future-work)
@@ -18,7 +19,7 @@ A high-performance hardware accelerator for 2D convolution operations, designed 
 
 ## Overview
 
-This project presents a **Weight Stationary (WS) dataflow** architecture optimized for 2D convolution acceleration. Rather than implementing a straightforward convolution approach, the design evolved through rigorous analysis, failed assumptions, and trade-offs—closely resembling a real hardware development process.
+This project presents a **Weight Stationary (WS) dataflow** architecture optimized for 2D convolution acceleration. Rather than implementing a straightforward convolution approach, the design evolved through analysis, failed assumptions, and trade-offs, much like a real hardware development process.
 
 ### Key Innovation
 
@@ -52,14 +53,23 @@ The accelerator is designed as a streaming coprocessor that:
 
 ### 📊 Performance Metrics
 
+Signed off with **OpenLane 2 / SkyWater sky130A** at an 80 ns (12.5 MHz) clock:
+DRC-clean, LVS-clean, and timing met. Full details in
+[Physical_Implementation.md](docs/Physical_Implementation.md) and [Metrics.md](docs/Metrics.md).
+
 | Metric | Value |
 |--------|-------|
-| Total Power | 0.444 W |
-| Core Area | 17,089,700 µm² |
-| Core Utilization | 28.3% |
-| Array Dimension | 8×8 |
-| Max Kernel Size | 16×16 |
-| Supported Image Size | Up to 64×64 |
+| DRC (KLayout `sky130A_mr`) | 0, pass |
+| LVS (Netgen) | 0 errors, pass |
+| Setup slack (slow corner) | +13.0 ns, met |
+| Hold | met |
+| Total power at 80 ns | 0.091 W |
+| Die / core area | 18.0 / 17.1 mm² |
+| Core utilization | 28.3% |
+| SRAM macros | 20 (4 of 32×512, 16 of 32×256) |
+| Array dimension | 8×8 |
+| Max kernel size | 16×16 |
+| Supported image size | up to 64×64 |
 
 ---
 
@@ -106,18 +116,19 @@ convolution-accelerator/
 │   │   └── systolic_array.v       # 8×8 array
 │   └── tb/                        # Testbenches
 │
-├── config/                        # Configuration files
-│   ├── config.json                # Design parameters
-│   └── macro_placement.cfg        # Placement configuration
+├── config/                        # OpenLane hardening configuration
+│   ├── config.json                # RTL-to-GDS flow parameters
+│   ├── macro_placement.cfg        # SRAM macro placement
+│   └── runs/                      # Generated flow runs (output, git-ignored)
 │
-├── docs/                          # Documentation
+├── docs/                          # Documentation (architecture, metrics, flow)
 │
-├── scripts/                       # Testing scripts
+├── scripts/                       # Simulation + verification scripts
+│   └── run_all_tests.py, verify*  # Functional test/verify helpers
 │
-├── test_cases/                    # Test configurations
-│   ├── 01 -> 10
+├── test_cases/                    # Test configurations (01 -> 10)
 │
-├── sim/                           # Simulation scripts
+└── sim/                           # Simulation scripts
 ```
 
 ---
@@ -170,6 +181,25 @@ This will:
 ```bash
 bash scripts/verify.sh
 ```
+
+### Physical Implementation (RTL-to-GDS)
+
+The accelerator is hardened to GDSII with **OpenLane 2** on the **SkyWater
+sky130A** PDK. The flow is driven by `config/config.json` and produces a
+**DRC-clean, LVS-clean, timing-met** layout. See
+[docs/Physical_Implementation.md](docs/Physical_Implementation.md) for the full
+flow, configuration rationale, and the SRAM-macro signoff fixes.
+
+```bash
+# Launch the full RTL-to-GDS flow (output lands in config/runs/<tag>/)
+openlane config/config.json --run-tag my_run
+
+# Follow the live flow log
+tail -f config/runs/my_run/flow.log
+```
+
+A run succeeds when `config/runs/<tag>/final/` appears, containing
+`final/gds/conv_accelerator_top.gds` plus DEF/LEF/LIB/SDC/SDF/SPEF/SPICE views.
 
 ---
 
@@ -224,11 +254,19 @@ output [7:0] tx_data        // Output data to DRAM
 
 ### Timing Constraints
 
+The hardened design closes timing cleanly at an **80 ns clock (12.5 MHz)**:
+
 | Metric | Value |
 |--------|-------|
-| Worst Setup Slack | -11.6 ns |
-| Total Negative Slack | -1113.27 ns |
-| Max Operating Frequency | ~20-30 MHz (after timing closure) |
+| Clock period | 80 ns (12.5 MHz) |
+| Worst Setup Slack (slow corner) | +13.0 ns, met |
+| Setup / Hold violations | 0 / 0 |
+
+> The clock was tightened from an earlier 150 ns point, which met timing with
+> about 46 ns of unused slack. 80 ns is the fastest clean operating point from
+> configuration alone. Going faster (70 ns) keeps setup positive but introduces
+> small hold violations, so beyond 80 ns needs RTL pipelining of the
+> systolic-array drain path.
 
 ---
 ## Key Design Decisions
@@ -264,7 +302,8 @@ For detailed information, refer to the documentation files:
 - **[Memory Organization.md](docs/Memory%20Organization.md)** - SRAM layout, address generation, and memory mapping
 - **[Control Unit.md](docs/Control%20Unit.md)** - FSM design and state transitions
 - **[Systolic Array Documentation](docs/Systolic%20Array/)** - Detailed PE and array specifications
-- **[Metrics.md](docs/Metrics.md)** - PPA (Power, Performance, Area) results
+- **[Physical_Implementation.md](docs/Physical_Implementation.md)** - RTL-to-GDS (OpenLane/sky130) flow, configuration, and signoff fixes
+- **[Metrics.md](docs/Metrics.md)** - PPA (Power, Performance, Area) & signoff results
 - **[Team_Contributions.md](docs/Team_Contributions.md)** - Team member roles and module ownership
 
 ---

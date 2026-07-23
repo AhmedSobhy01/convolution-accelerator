@@ -2,35 +2,56 @@
   "DESIGN_NAME": "conv_accelerator_top",
   "VERILOG_FILES": [
     "dir::../rtl/conv_accelerator_top.v",
-    "dir::../rtl/control_unit.v",
-    "dir::../rtl/pe.v",
-    "dir::../rtl/systolic_array.v",
-    "dir::../rtl/dl_dma_rx.v",
-    "dir::../rtl/byte_window_streamer.v",
-    "dir::../rtl/kernel_window_streamer.v",
-    "dir::../rtl/dl_sa_writeback.v",
-    "dir::../rtl/dl_drain_stream.v",
-    "dir::../rtl/sram0_wrapper.v",
-    "dir::../rtl/sram1_wrapper.v",
-    "dir::../data-loader-agu/designs/SRAM_64_1024_2_grid/src/memory_generator_sky130_64_1024_2.v",
-    "dir::../data-loader-agu/designs/SRAM_32_4096_1_grid/src/memory_generator_sky130_32_4096_1.v",
-    "dir::../rtl/sram_blackbox.v"
+    "dir::../rtl/control_unit/control_unit.v",
+    "dir::../rtl/systolic_array/pe.v",
+    "dir::../rtl/systolic_array/systolic_array.v",
+    "dir::../rtl/data-loader-agu/src/dl_dma_rx.v",
+    "dir::../rtl/data-loader-agu/src/byte_window_streamer.v",
+    "dir::../rtl/data-loader-agu/src/kernel_window_streamer.v",
+    "dir::../rtl/data-loader-agu/src/dl_sa_writeback.v",
+    "dir::../rtl/data-loader-agu/src/dl_drain_stream.v",
+    "dir::../rtl/data-loader-agu/src/sram0_wrapper.v",
+    "dir::../rtl/data-loader-agu/src/sram1_wrapper.v",
+    "dir::../rtl/data-loader-agu/designs/SRAM_64_1024_2_grid/src/memory_generator_sky130_64_1024_2.v",
+    "dir::../rtl/data-loader-agu/designs/SRAM_32_4096_1_grid/src/memory_generator_sky130_32_4096_1.v"
   ],
-  "EXTRA_LEFS": [
-    "dir::../data-loader-agu/Python_scripts/macro_files/LEF/sky130_sram_1kbyte_1rw1r_32x256_8.lef",
-    "dir::../data-loader-agu/Python_scripts/macro_files/LEF/sky130_sram_2kbyte_1rw1r_32x512_8.lef"
-  ],
-  "EXTRA_GDS_FILES": [
-    "dir::../data-loader-agu/Python_scripts/macro_files/GDS/sky130_sram_1kbyte_1rw1r_32x256_8.gds",
-    "dir::../data-loader-agu/Python_scripts/macro_files/GDS/sky130_sram_2kbyte_1rw1r_32x512_8.gds"
-  ],
-  "EXTRA_LIBS": [
-    "dir::../data-loader-agu/Python_scripts/macro_files/LIB/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib",
-    "dir::../data-loader-agu/Python_scripts/macro_files/LIB/sky130_sram_2kbyte_1rw1r_32x512_8_TT_1p8V_25C.lib"
-  ],
+  "MACROS": {
+    "sky130_sram_1kbyte_1rw1r_32x256_8": {
+      "gds": [
+        "dir::../rtl/data-loader-agu/Python_scripts/macro_files/GDS/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
+      ],
+      "lef": [
+        "dir::../rtl/data-loader-agu/Python_scripts/macro_files/LEF/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
+      ],
+      "lib": {
+        "*": [
+          "dir::../rtl/data-loader-agu/Python_scripts/macro_files/LIB/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
+        ]
+      },
+      "nl": [
+        "dir::../rtl/sram_blackbox_32x256.v"
+      ]
+    },
+    "sky130_sram_2kbyte_1rw1r_32x512_8": {
+      "gds": [
+        "dir::../rtl/data-loader-agu/Python_scripts/macro_files/GDS/sky130_sram_2kbyte_1rw1r_32x512_8.gds"
+      ],
+      "lef": [
+        "dir::../rtl/data-loader-agu/Python_scripts/macro_files/LEF/sky130_sram_2kbyte_1rw1r_32x512_8.lef"
+      ],
+      "lib": {
+        "*": [
+          "dir::../rtl/data-loader-agu/Python_scripts/macro_files/LIB/sky130_sram_2kbyte_1rw1r_32x512_8_TT_1p8V_25C.lib"
+        ]
+      },
+      "nl": [
+        "dir::../rtl/sram_blackbox_32x512.v"
+      ]
+    }
+  },
   "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
   "CLOCK_PORT": "clk",
-  "CLOCK_PERIOD": 150.0,
+  "CLOCK_PERIOD": 80.0,
   "FP_PDN_MULTILAYER": true,
   "FP_PDN_CORE_RING": true,
   "RUN_HEURISTIC_DIODE_INSERTION": true,
@@ -45,9 +66,6 @@
   "VERILOG_DEFINES": [
     "USE_POWER_PINS"
   ],
-  "SYNTH_DEFINES": [
-    "USE_POWER_PINS"
-  ],
   "FP_PDN_HPITCH": 350,
   "FP_PDN_VPITCH": 100,
   "GRT_ADJUSTMENT": 0.3,
@@ -60,5 +78,8 @@
   "DPL_CELL_PADDING": 2,
   "MAGIC_DRC_USE_GDS": false,
   "RUN_MAGIC_DRC": false,
-  "RUN_KLAYOUT_DRC": true
+  "RUN_KLAYOUT_DRC": true,
+  "MAGIC_MACRO_STD_CELL_SOURCE": "PDK",
+  "PRIMARY_GDSII_STREAMOUT_TOOL": "klayout",
+  "ERROR_ON_XOR_ERROR": false
 }
